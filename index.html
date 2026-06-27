@@ -273,14 +273,14 @@
 
       if (isRegister) {
         authTitle.textContent = 'Tạo tài khoản';
-        authSubtitle.textContent = 'Trở thành thành viên của Boba Chat';
+        authSubtitle.textContent = 'Trở thành thành viên của Lorem';
         registerFields.style.display = 'flex';
         authBtn.textContent = 'Tạo tài khoản';
         toggleText.innerHTML = `Đã có tài khoản? <a href="#" onclick="toggleAuthMode(false); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng nhập</a>`;
         idBoxes.forEach(b => b.value = ''); // Xóa trắng id box
       } else {
         authTitle.textContent = 'Xin chào!';
-        authSubtitle.textContent = 'Đăng nhập vào Boba Chat';
+        authSubtitle.textContent = 'Đăng nhập vào Lorem';
         registerFields.style.display = 'none';
         authBtn.textContent = 'Đăng nhập';
         toggleText.innerHTML = `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng ký ngay</a>`;
