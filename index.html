@@ -1,299 +1,178 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Supabase Chat App - Secret Key Version</title>
+  <title>Ứng Dụng Chat</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
     .app-container { width: 100%; max-width: 450px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 85vh; overflow: hidden; }
-    .chat-header { background: #d9534f; color: white; padding: 15px 20px; text-align: center; font-size: 1.1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    .chat-header { background: #0084ff; color: white; padding: 15px 20px; text-align: center; font-size: 1.1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
     .my-profile { font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; }
     .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
     .panel.active { display: flex; }
+    
     .auth-panel { padding: 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; }
-    .auth-panel input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-    .auth-panel button { padding: 10px; background: #d9534f; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .auth-panel input { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
+    .auth-panel button { padding: 12px; background: #0084ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+    .auth-panel button.register-btn { background: #28a745; }
+    
+    .register-fields { display: none; flex-direction: column; gap: 15px; border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px; }
+    .register-msg { font-size: 0.85rem; color: #d9534f; margin: 0; font-weight: 500; }
+    
     .tools-area { padding: 15px; background: #fafafa; border-bottom: 1px solid #eaeaea; display: flex; gap: 10px;}
-    .tools-area input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-    .tools-area button { padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .tools-area input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }
+    .tools-area button { padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    
     .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-color: #ffffff; }
     .message { max-width: 75%; padding: 10px 14px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; font-size: 0.95rem; }
-    .message.sent { background: #d9534f; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .message.sent { background: #0084ff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
     .message.received { background: #f0f0f0; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; }
+    
     .chat-input-area { display: flex; padding: 15px; border-top: 1px solid #eaeaea; background: #fafafa; gap: 10px; }
     .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-    .chat-input-area button { background: #d9534f; color: white; border: none; padding: 0 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
-    .warning-banner { background: #ffcc00; color: #333; text-align: center; padding: 10px; font-size: 0.85rem; font-weight: bold; }
+    .chat-input-area button { background: #0084ff; color: white; border: none; padding: 0 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <div class="app-container">
-    <div class="warning-banner">⚠️ LOCAL TESTING ONLY: Secret Key in use</div>
     
     <div id="auth-panel" class="panel active auth-panel">
-      <h2 style="text-align:center; margin-top:0;">Login / Register</h2>
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Password">
-      <input type="text" id="username" placeholder="Username (For new accounts)">
-      <button onclick="handleAuth('login')">Login</button>
-      <button onclick="handleAuth('register')" style="background:#28a745;">Register</button>
+      <h2 style="text-align:center; margin-top:0;">Đăng nhập</h2>
+      
+      <input type="text" id="contact" placeholder="Email hoặc Số điện thoại">
+      <input type="password" id="password" placeholder="Mật khẩu">
+      
+      <div id="register-fields" class="register-fields">
+        <p class="register-msg">Tài khoản chưa tồn tại. Vui lòng nhập Tên và ID để tạo tài khoản mới.</p>
+        <input type="text" id="username" placeholder="Tên hiển thị (VD: Huy)">
+        <input type="text" id="custom-id" placeholder="ID (Bắt buộc 4 số, VD: 1234)" maxlength="4">
+      </div>
+
+      <button id="auth-btn" onclick="handleAuth()">Đăng nhập</button>
     </div>
 
     <div id="app-panel" class="panel">
       <div class="chat-header">
-        <span>Chat App</span>
-        <span class="my-profile" id="my-discord-tag">User#0000</span>
+        <span>Tin nhắn</span>
+        <span class="my-profile" id="my-discord-tag">Tên#0000</span>
       </div>
       
       <div class="tools-area">
-        <input type="text" id="friend-search" placeholder="Friend (e.g. John#1234)">
-        <button onclick="sendFriendRequest()">Add Friend</button>
+        <input type="text" id="friend-search" placeholder="Tìm bạn (VD: Huy#1234)">
+        <button onclick="sendFriendRequest()">Kết bạn</button>
       </div>
       
       <div class="chat-messages" id="chat-messages"></div>
       
       <form class="chat-input-area" id="chat-form">
-        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required>
-        <button type="submit">Send</button>
+        <input type="text" id="message-input" placeholder="Nhập tin nhắn..." autocomplete="off" required>
+        <button type="submit">Gửi</button>
       </form>
     </div>
 
   </div>
 
   <script>
-    // 1. Initialize Supabase with the SECRET ROLE KEY
+    // 1. Cấu hình Supabase (GIỮ NGUYÊN SECRET KEY ĐỂ BYPASS RLS NHƯ BẠN YÊU CẦU)
     const supabaseUrl = 'https://secuuvhgvjdqsxodzgln.supabase.co';
-    
-    // REPLACE THIS WITH YOUR ACTUAL SERVICE_ROLE KEY
     const supabaseSecretKey = 'sb_secret_Exc67jwlUHCPIpxgkpzD6w_wWE4Lm8a'; 
-    
     const supabase = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
 
     let currentUser = null;
     let currentProfile = null;
     let activeFriendId = null; 
+    let isRegisterMode = false; // Biến kiểm tra xem đang ở bước đăng nhập hay đăng ký
 
+    // Các thẻ HTML
     const authPanel = document.getElementById('auth-panel');
     const appPanel = document.getElementById('app-panel');
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
     const myTagDisplay = document.getElementById('my-discord-tag');
+    
+    const registerFields = document.getElementById('register-fields');
+    const authBtn = document.getElementById('auth-btn');
 
-    async function handleAuth(action) {
-      const email = document.getElementById('email').value;
+    // 2. Xử lý Đăng nhập / Đăng ký
+    async function handleAuth() {
+      const contact = document.getElementById('contact').value.trim();
       const password = document.getElementById('password').value;
-      const username = document.getElementById('username').value;
+      
+      if (!contact || !password) return alert("Vui lòng nhập đầy đủ thông tin liên hệ và mật khẩu!");
 
-      if (action === 'register') {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) return alert(error.message);
+      // Kiểm tra xem người dùng nhập email hay số điện thoại
+      const isEmail = contact.includes('@');
+      const credentials = isEmail ? { email: contact, password: password } : { phone: contact, password: password };
+
+      // NẾU ĐANG Ở CHẾ ĐỘ ĐĂNG NHẬP
+      if (!isRegisterMode) {
+        const { data, error } = await supabase.auth.signInWithPassword(credentials);
         
-        const tag = Math.floor(1000 + Math.random() * 9000).toString();
+        if (error) {
+          // Đăng nhập lỗi (Thường do sai mật khẩu hoặc tài khoản chưa tồn tại)
+          // Mở giao diện tạo tài khoản
+          isRegisterMode = true;
+          registerFields.style.display = 'flex';
+          authBtn.textContent = 'Tạo tài khoản';
+          authBtn.classList.add('register-btn');
+        } else {
+          // Đăng nhập thành công
+          currentUser = data.user;
+          await loadProfile();
+          showApp();
+        }
+      } 
+      // NẾU ĐANG Ở CHẾ ĐỘ TẠO TÀI KHOẢN (Đã hiện ô Tên và ID)
+      else {
+        const username = document.getElementById('username').value.trim();
+        const customId = document.getElementById('custom-id').value.trim();
+
+        // Validate ID phải là 4 số
+        const idRegex = /^\d{4}$/;
+        if (!idRegex.test(customId)) {
+          return alert("Lỗi: ID bắt buộc phải là 4 chữ số (Ví dụ: 1234)!");
+        }
+        if (!username) return alert("Vui lòng nhập tên hiển thị!");
+
+        // Tạo tài khoản mới trong hệ thống Auth
+        const { data, error } = await supabase.auth.signUp(credentials);
+        if (error) return alert("Lỗi tạo tài khoản: " + error.message);
         
-        // Because you are using the secret key, this insert will NEVER fail due to RLS
-        await supabase.from('profiles').insert([{ id: data.user.id, username: username, tag: tag }]);
-        alert('Registered successfully! Please login.');
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) return alert(error.message);
-        
-        currentUser = data.user;
-        await loadProfile();
-        showApp();
-      }
-    }
-
-    async function loadProfile() {
-      const { data } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-      currentProfile = data;
-      myTagDisplay.textContent = `${data.username}#${data.tag}`;
-      subscribeToMessages();
-    }
-
-    function showApp() {
-      authPanel.classList.remove('active');
-      appPanel.classList.add('active');
-    }
-
-    async function sendFriendRequest() {
-      const searchQuery = document.getElementById('friend-search').value.trim();
-      if (!searchQuery.includes('#')) return alert('Use format: Username#1234');
-      
-      const [username, tag] = searchQuery.split('#');
-      
-      // Bypasses RLS to search all profiles
-      const { data: friendProfile, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', username)
-        .eq('tag', tag)
-        .single();
-        
-      if (error || !friendProfile) return alert('User not found!');
-      
-      await supabase.from('friends').insert([{
-        sender_id: currentProfile.id,
-        receiver_id: friendProfile.id,
-        status: 'accepted'
-      }]);
-      
-      activeFriendId = friendProfile.id;
-      alert(`Connected with ${searchQuery}! You can now send messages.`);
-      chatMessages.innerHTML = ''; 
-    }
-
-    chatForm.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const text = messageInput.value.trim();
-      
-      if (text !== '' && activeFriendId) {
-        renderMessage(text, 'sent');
-        messageInput.value = '';
-
-        // Bypasses RLS to insert messages
-        await supabase.from('messages').insert([{
-          sender_id: currentProfile.id,
-          receiver_id: activeFriendId,
-          content: text
+        // Lưu Tên và ID vào bảng profiles
+        const { error: profileError } = await supabase.from('profiles').insert([{ 
+          id: data.user.id, 
+          username: username, 
+          tag: customId 
         }]);
-      } else if (!activeFriendId) {
-        alert("Please add a friend first!");
-      }
-    });
 
-    function renderMessage(text, type) {
-      const msgDiv = document.createElement('div');
-      msgDiv.classList.add('message', type);
-      msgDiv.textContent = text;
-      chatMessages.appendChild(msgDiv);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function subscribeToMessages() {
-      supabase.channel('public:messages')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-          const newMsg = payload.new;
-          if (newMsg.receiver_id === currentProfile.id && newMsg.sender_id === activeFriendId) {
-            renderMessage(newMsg.content, 'received');
+        if (profileError) {
+          if(profileError.code === '23505') {
+            return alert("Lỗi: Tên và ID này đã có người sử dụng. Vui lòng chọn ID hoặc Tên khác.");
           }
-        })
-        .subscribe();
-    }
-  </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Supabase Chat App - Secret Key Version</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .app-container { width: 100%; max-width: 450px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 85vh; overflow: hidden; }
-    .chat-header { background: #d9534f; color: white; padding: 15px 20px; text-align: center; font-size: 1.1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-    .my-profile { font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; }
-    .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
-    .panel.active { display: flex; }
-    .auth-panel { padding: 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; }
-    .auth-panel input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-    .auth-panel button { padding: 10px; background: #d9534f; color: white; border: none; border-radius: 6px; cursor: pointer; }
-    .tools-area { padding: 15px; background: #fafafa; border-bottom: 1px solid #eaeaea; display: flex; gap: 10px;}
-    .tools-area input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-    .tools-area button { padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-color: #ffffff; }
-    .message { max-width: 75%; padding: 10px 14px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; font-size: 0.95rem; }
-    .message.sent { background: #d9534f; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-    .message.received { background: #f0f0f0; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; }
-    .chat-input-area { display: flex; padding: 15px; border-top: 1px solid #eaeaea; background: #fafafa; gap: 10px; }
-    .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-    .chat-input-area button { background: #d9534f; color: white; border: none; padding: 0 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
-    .warning-banner { background: #ffcc00; color: #333; text-align: center; padding: 10px; font-size: 0.85rem; font-weight: bold; }
-  </style>
-</head>
-<body>
-
-  <div class="app-container">
-    <div class="warning-banner">⚠️ LOCAL TESTING ONLY: Secret Key in use</div>
-    
-    <div id="auth-panel" class="panel active auth-panel">
-      <h2 style="text-align:center; margin-top:0;">Login / Register</h2>
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Password">
-      <input type="text" id="username" placeholder="Username (For new accounts)">
-      <button onclick="handleAuth('login')">Login</button>
-      <button onclick="handleAuth('register')" style="background:#28a745;">Register</button>
-    </div>
-
-    <div id="app-panel" class="panel">
-      <div class="chat-header">
-        <span>Chat App</span>
-        <span class="my-profile" id="my-discord-tag">User#0000</span>
-      </div>
-      
-      <div class="tools-area">
-        <input type="text" id="friend-search" placeholder="Friend (e.g. John#1234)">
-        <button onclick="sendFriendRequest()">Add Friend</button>
-      </div>
-      
-      <div class="chat-messages" id="chat-messages"></div>
-      
-      <form class="chat-input-area" id="chat-form">
-        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required>
-        <button type="submit">Send</button>
-      </form>
-    </div>
-
-  </div>
-
-  <script>
-    // 1. Initialize Supabase with the SECRET ROLE KEY
-    const supabaseUrl = 'YOUR_SUPABASE_URL';
-    
-    // REPLACE THIS WITH YOUR ACTUAL SERVICE_ROLE KEY
-    const supabaseSecretKey = 'YOUR_SUPABASE_SERVICE_ROLE_KEY'; 
-    
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
-
-    let currentUser = null;
-    let currentProfile = null;
-    let activeFriendId = null; 
-
-    const authPanel = document.getElementById('auth-panel');
-    const appPanel = document.getElementById('app-panel');
-    const chatMessages = document.getElementById('chat-messages');
-    const chatForm = document.getElementById('chat-form');
-    const messageInput = document.getElementById('message-input');
-    const myTagDisplay = document.getElementById('my-discord-tag');
-
-    async function handleAuth(action) {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const username = document.getElementById('username').value;
-
-      if (action === 'register') {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) return alert(error.message);
+          return alert("Lỗi lưu thông tin: " + profileError.message);
+        }
         
-        const tag = Math.floor(1000 + Math.random() * 9000).toString();
+        alert('Tạo tài khoản thành công! Hệ thống sẽ tự động đăng nhập.');
         
-        // Because you are using the secret key, this insert will NEVER fail due to RLS
-        await supabase.from('profiles').insert([{ id: data.user.id, username: username, tag: tag }]);
-        alert('Registered successfully! Please login.');
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) return alert(error.message);
+        // Trở về giao diện đăng nhập và tiến hành đăng nhập luôn
+        isRegisterMode = false;
+        registerFields.style.display = 'none';
+        authBtn.textContent = 'Đăng nhập';
+        authBtn.classList.remove('register-btn');
         
-        currentUser = data.user;
+        // Đăng nhập tự động sau khi đăng ký
+        const signInData = await supabase.auth.signInWithPassword(credentials);
+        currentUser = signInData.data.user;
         await loadProfile();
         showApp();
       }
     }
 
+    // Tải thông tin cá nhân
     async function loadProfile() {
       const { data } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
       currentProfile = data;
@@ -306,13 +185,14 @@
       appPanel.classList.add('active');
     }
 
+    // 3. Hệ thống kết bạn
     async function sendFriendRequest() {
       const searchQuery = document.getElementById('friend-search').value.trim();
-      if (!searchQuery.includes('#')) return alert('Use format: Username#1234');
+      if (!searchQuery.includes('#')) return alert('Vui lòng nhập đúng định dạng: Tên#1234');
       
       const [username, tag] = searchQuery.split('#');
       
-      // Bypasses RLS to search all profiles
+      // Tìm kiếm user
       const { data: friendProfile, error } = await supabase
         .from('profiles')
         .select('id')
@@ -320,8 +200,10 @@
         .eq('tag', tag)
         .single();
         
-      if (error || !friendProfile) return alert('User not found!');
+      if (error || !friendProfile) return alert('Không tìm thấy người dùng này!');
+      if (friendProfile.id === currentProfile.id) return alert('Bạn không thể tự kết bạn với chính mình!');
       
+      // Ghi dữ liệu vào bảng friends
       await supabase.from('friends').insert([{
         sender_id: currentProfile.id,
         receiver_id: friendProfile.id,
@@ -329,10 +211,11 @@
       }]);
       
       activeFriendId = friendProfile.id;
-      alert(`Connected with ${searchQuery}! You can now send messages.`);
-      chatMessages.innerHTML = ''; 
+      alert(`Đã kết nối với ${searchQuery}! Bây giờ bạn có thể nhắn tin.`);
+      chatMessages.innerHTML = ''; // Xóa sạch khung chat cũ
     }
 
+    // 4. Gửi tin nhắn
     chatForm.addEventListener('submit', async function(e) {
       e.preventDefault();
       const text = messageInput.value.trim();
@@ -341,29 +224,31 @@
         renderMessage(text, 'sent');
         messageInput.value = '';
 
-        // Bypasses RLS to insert messages
         await supabase.from('messages').insert([{
           sender_id: currentProfile.id,
           receiver_id: activeFriendId,
           content: text
         }]);
       } else if (!activeFriendId) {
-        alert("Please add a friend first!");
+        alert("Vui lòng tìm và kết bạn trước khi nhắn tin!");
       }
     });
 
+    // Vẽ tin nhắn lên màn hình
     function renderMessage(text, type) {
       const msgDiv = document.createElement('div');
       msgDiv.classList.add('message', type);
       msgDiv.textContent = text;
       chatMessages.appendChild(msgDiv);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+      chatMessages.scrollTop = chatMessages.scrollHeight; // Tự động cuộn xuống dưới cùng
     }
 
+    // 5. Cập nhật tin nhắn Real-time (Thời gian thực)
     function subscribeToMessages() {
       supabase.channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
           const newMsg = payload.new;
+          // Nếu tin nhắn gửi đến mình và từ người bạn mình đang mở chat
           if (newMsg.receiver_id === currentProfile.id && newMsg.sender_id === activeFriendId) {
             renderMessage(newMsg.content, 'received');
           }
