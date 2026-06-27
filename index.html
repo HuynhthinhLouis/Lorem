@@ -85,7 +85,6 @@
     let activeFriendId = null; 
     let isRegisterMode = false; 
 
-    // Các thẻ HTML
     const authPanel = document.getElementById('auth-panel');
     const appPanel = document.getElementById('app-panel');
     const chatMessages = document.getElementById('chat-messages');
@@ -96,6 +95,16 @@
     const registerFields = document.getElementById('register-fields');
     const authBtn = document.getElementById('auth-btn');
 
+    // Hàm mã hóa mật khẩu bằng SHA-256 (Web Crypto API)
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    }
+
     // Xử lý Đăng nhập / Đăng ký
     async function handleAuth() {
       const contact = document.getElementById('contact').value.trim();
@@ -103,16 +112,15 @@
       
       if (!contact || !password) return alert("Vui lòng nhập đầy đủ Email và mật khẩu!");
 
-      // Bắt buộc phải nhập Email
       const isEmail = contact.includes('@');
       if (!isEmail) {
         return alert("Vui lòng nhập một địa chỉ email hợp lệ (phải có ký tự @)!");
       }
 
-      // Chỉ sử dụng email
       const credentials = { email: contact, password: password };
 
       if (!isRegisterMode) {
+        // ĐĂNG NHẬP
         const { data, error } = await mySupabaseClient.auth.signInWithPassword(credentials);
         
         if (error) {
@@ -127,6 +135,7 @@
         }
       } 
       else {
+        // ĐĂNG KÝ MỚI
         const username = document.getElementById('username').value.trim();
         const customId = document.getElementById('custom-id').value.trim();
 
@@ -136,13 +145,20 @@
         }
         if (!username) return alert("Vui lòng nhập tên hiển thị!");
 
+        // 1. Tạo tài khoản trong hệ thống Auth của Supabase
         const { data, error } = await mySupabaseClient.auth.signUp(credentials);
         if (error) return alert("Lỗi tạo tài khoản: " + error.message);
         
+        // 2. Tự động mã hóa mật khẩu trước khi lưu vào bảng Profiles
+        const myPasswordHash = await hashPassword(password);
+
+        // 3. Lưu toàn bộ thông tin (id, tên, tag, email, password_hash) vào DB
         const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ 
           id: data.user.id, 
           username: username, 
-          tag: customId 
+          tag: customId,
+          email: contact,
+          password_hash: myPasswordHash 
         }]);
 
         if (profileError) {
@@ -159,6 +175,7 @@
         authBtn.textContent = 'Đăng nhập';
         authBtn.classList.remove('register-btn');
         
+        // Tự động đăng nhập sau khi tạo thành công
         const signInData = await mySupabaseClient.auth.signInWithPassword(credentials);
         currentUser = signInData.data.user;
         await loadProfile();
