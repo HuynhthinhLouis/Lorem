@@ -22,13 +22,6 @@
     
     .register-fields { display: none; flex-direction: column; gap: 15px; border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px; }
     
-    /* Giao diện OTP */
-    .otp-panel { padding: 30px; text-align: center; justify-content: center; }
-    .otp-container { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
-    .otp-box { width: 45px; height: 55px; font-size: 1.5rem; text-align: center; border: 1px solid #ddd; border-radius: 8px; outline: none; font-weight: bold;}
-    .otp-box:focus { border-color: #0084ff; box-shadow: 0 0 0 2px rgba(0,132,255,0.2); }
-    .otp-panel button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
-    
     .tools-area { padding: 15px; background: #fafafa; border-bottom: 1px solid #eaeaea; display: flex; gap: 10px;}
     .tools-area input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }
     .tools-area button { padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
@@ -54,6 +47,7 @@
       <input type="text" id="contact" placeholder="Nhập địa chỉ Email">
       <input type="password" id="password" placeholder="Mật khẩu">
       
+      <!-- Các trường đăng ký mặc định ẩn -->
       <div id="register-fields" class="register-fields">
         <input type="text" id="username" placeholder="Tên hiển thị (VD: Huy)">
         <input type="text" id="custom-id" placeholder="ID (Bắt buộc 4 số, VD: 1234)" maxlength="4">
@@ -61,29 +55,9 @@
 
       <button id="auth-btn" onclick="handleAuth()">Đăng nhập</button>
       
+      <!-- Nút chuyển đổi chế độ rõ ràng -->
       <p id="toggle-auth-text" style="text-align: center; font-size: 0.9rem; margin-top: 10px; color: #555;">
         Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: #0084ff; font-weight: bold; text-decoration: none;">Đăng ký ngay</a>
-      </p>
-    </div>
-
-    <!-- PANEL XÁC THỰC OTP -->
-    <div id="otp-panel" class="panel otp-panel">
-      <h2 style="margin-top:0;">Xác thực Email</h2>
-      <p style="font-size: 0.9rem; color: #555; margin-bottom: 5px;">Chúng tôi đã gửi mã 6 số đến email của bạn.</p>
-      <p style="font-size: 0.85rem; color: #888;">(Vui lòng kiểm tra cả thư mục Spam)</p>
-      
-      <div class="otp-container">
-        <input type="text" maxlength="1" class="otp-box">
-        <input type="text" maxlength="1" class="otp-box">
-        <input type="text" maxlength="1" class="otp-box">
-        <input type="text" maxlength="1" class="otp-box">
-        <input type="text" maxlength="1" class="otp-box">
-        <input type="text" maxlength="1" class="otp-box">
-      </div>
-      
-      <button onclick="verifyOTP()">Xác nhận tài khoản</button>
-      <p style="text-align: center; font-size: 0.9rem; margin-top: 15px;">
-        <a href="#" onclick="cancelOTP(); return false;" style="color: #d9534f; text-decoration: none;">Quay lại</a>
       </p>
     </div>
 
@@ -118,10 +92,8 @@
     let currentProfile = null;
     let activeFriendId = null; 
     let isRegisterMode = false; 
-    let pendingSignupData = null; // Lưu tạm thông tin để tạo Profile sau khi nhập OTP
 
     const authPanel = document.getElementById('auth-panel');
-    const otpPanel = document.getElementById('otp-panel');
     const appPanel = document.getElementById('app-panel');
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
@@ -133,23 +105,7 @@
     const authTitle = document.getElementById('auth-title');
     const toggleAuthText = document.getElementById('toggle-auth-text');
 
-    // Thiết lập logic tự động nhảy ô cho OTP
-    const otpInputs = document.querySelectorAll('.otp-box');
-    otpInputs.forEach((input, index) => {
-      input.addEventListener('input', (e) => {
-        // Chỉ cho phép nhập số
-        e.target.value = e.target.value.replace(/[^0-9]/g, '');
-        if (e.target.value !== '' && index < otpInputs.length - 1) {
-          otpInputs[index + 1].focus();
-        }
-      });
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
-          otpInputs[index - 1].focus();
-        }
-      });
-    });
-
+    // Hàm chuyển đổi giao diện giữa Đăng nhập và Đăng ký
     function toggleAuthMode(isRegister) {
       isRegisterMode = isRegister;
       if (isRegister) {
@@ -175,6 +131,7 @@
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
+    // Hàm xử lý chính
     async function handleAuth() {
       const contact = document.getElementById('contact').value.trim();
       const password = document.getElementById('password').value;
@@ -189,10 +146,7 @@
         const { data, error } = await mySupabaseClient.auth.signInWithPassword(credentials);
         
         if (error) {
-          if (error.message.includes('Email not confirmed')) {
-            return alert("Email này chưa được xác thực! Vui lòng kiểm tra hộp thư của bạn.");
-          }
-          return alert("Đăng nhập thất bại: Sai tài khoản hoặc mật khẩu!");
+          return alert("Đăng nhập thất bại: Sai email hoặc mật khẩu!");
         } 
         
         currentUser = data.user;
@@ -207,94 +161,51 @@
         if (!/^\d{4}$/.test(customId)) return alert("Lỗi: ID bắt buộc phải là 4 chữ số (Ví dụ: 1234)!");
         if (!username) return alert("Vui lòng nhập tên hiển thị!");
 
-        // 1. Gửi yêu cầu Đăng ký lên Supabase (Supabase sẽ gửi email OTP)
+        // 1. Tạo tài khoản Auth
         const { data, error } = await mySupabaseClient.auth.signUp(credentials);
-        
         if (error) return alert("Lỗi tạo tài khoản: " + error.message);
         
-        // 2. Lưu tạm thông tin để xử lý sau khi xác thực OTP thành công
-        pendingSignupData = {
-          email: contact,
-          password: password,
-          username: username,
-          customId: customId
-        };
-
-        // 3. Chuyển sang giao diện OTP
-        authPanel.classList.remove('active');
-        otpPanel.classList.add('active');
-        
-        // Focus ngay vào ô OTP đầu tiên
-        otpInputs[0].focus();
-      }
-    }
-
-    // Xử lý nút Xác nhận OTP
-    async function verifyOTP() {
-      // Gom 6 số lại thành chuỗi
-      const otpCode = Array.from(otpInputs).map(input => input.value).join('');
-      
-      if (otpCode.length !== 6) {
-        return alert("Vui lòng nhập đầy đủ mã xác thực 6 số!");
-      }
-
-      // 1. Gửi mã OTP lên Supabase để xác minh
-      const { data, error } = await mySupabaseClient.auth.verifyOtp({
-        email: pendingSignupData.email,
-        token: otpCode,
-        type: 'signup'
-      });
-
-      if (error) {
-        return alert("Mã xác thực không chính xác hoặc đã hết hạn!");
-      }
-
-      // 2. Xác thực thành công -> Lưu thông tin vào bảng profiles
-      const myPasswordHash = await hashPassword(pendingSignupData.password);
-
-      const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ 
-        id: data.user.id, 
-        username: pendingSignupData.username, 
-        tag: pendingSignupData.customId,
-        email: pendingSignupData.email,
-        password_hash: myPasswordHash 
-      }]);
-
-      if (profileError) {
-        if(profileError.code === '23505') {
-          alert("Tài khoản đã tạo nhưng Tên/ID đã bị trùng. Hệ thống sẽ chuyển sang đăng nhập.");
-        } else {
-          alert("Lỗi lưu hồ sơ: " + profileError.message);
+        // Bắt lỗi nếu bạn quên chưa tắt "Confirm email" trên Supabase
+        if (data.session === null && data.user) {
+             alert("Tạo thành công nhưng chưa thể vào App! Vui lòng TẮT tính năng xác nhận Email (Confirm email) trên Supabase nhé.");
+             return;
         }
-      } else {
-        alert("Xác thực và tạo tài khoản thành công!");
+        
+        // 2. Mã hóa mật khẩu lưu vào Profiles
+        const myPasswordHash = await hashPassword(password);
+
+        // 3. Lưu thông tin Profile
+        const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ 
+          id: data.user.id, 
+          username: username, 
+          tag: customId,
+          email: contact,
+          password_hash: myPasswordHash 
+        }]);
+
+        if (profileError) {
+          if(profileError.code === '23505') return alert("Lỗi: Tên và ID này đã có người sử dụng. Vui lòng chọn ID hoặc Tên khác.");
+          return alert("Lỗi lưu thông tin: " + profileError.message);
+        }
+        
+        alert('Tạo tài khoản thành công! Hệ thống đang tự động đăng nhập...');
+        
+        // Đưa giao diện về lại trạng thái chuẩn
+        toggleAuthMode(false);
+        document.getElementById('password').value = ''; // Xóa mật khẩu cho an toàn
+        
+        currentUser = data.user;
+        await loadProfile();
+        showApp();
       }
-      
-      // 3. Hoàn tất, tải thông tin và vào App
-      currentUser = data.user;
-      pendingSignupData = null; // Xóa dữ liệu tạm
-      
-      // Reset giao diện đăng nhập cho lần sau
-      toggleAuthMode(false);
-      otpPanel.classList.remove('active');
-      
-      await loadProfile();
-      showApp();
-    }
-    
-    // Nút Hủy / Quay lại màn hình Đăng nhập
-    function cancelOTP() {
-      pendingSignupData = null;
-      otpInputs.forEach(input => input.value = ''); // Xóa trắng mã
-      otpPanel.classList.remove('active');
-      authPanel.classList.add('active');
-      toggleAuthMode(false);
     }
 
-    // Các hàm còn lại giữ nguyên
     async function loadProfile() {
       const { data, error } = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-      if (error || !data) return;
+      if (error || !data) {
+        alert("Lỗi tải thông tin Profile!");
+        return;
+      }
       currentProfile = data;
       myTagDisplay.textContent = `${data.username}#${data.tag}`;
       subscribeToMessages();
@@ -302,7 +213,6 @@
 
     function showApp() {
       authPanel.classList.remove('active');
-      otpPanel.classList.remove('active');
       appPanel.classList.add('active');
     }
 
@@ -340,6 +250,7 @@
       if (text !== '' && activeFriendId) {
         renderMessage(text, 'sent');
         messageInput.value = '';
+
         await mySupabaseClient.from('messages').insert([{
           sender_id: currentProfile.id,
           receiver_id: activeFriendId,
