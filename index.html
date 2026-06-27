@@ -3,170 +3,373 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simple Messaging UI</title>
+  <title>Supabase Chat App - Secret Key Version</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Basic Reset and Body Styling */
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f0f2f5;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-
-    /* The Main Chat Box */
-    .chat-container {
-      width: 100%;
-      max-width: 450px;
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-      display: flex;
-      flex-direction: column;
-      height: 85vh;
-      overflow: hidden;
-    }
-
-    /* Header */
-    .chat-header {
-      background: #0084ff;
-      color: white;
-      padding: 20px;
-      text-align: center;
-      font-size: 1.2rem;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-
-    /* The Area Where Messages Appear */
-    .chat-messages {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background-color: #ffffff;
-    }
-
-    /* Individual Message Bubbles */
-    .message {
-      max-width: 75%;
-      padding: 12px 16px;
-      border-radius: 20px;
-      line-height: 1.4;
-      word-wrap: break-word;
-      font-size: 0.95rem;
-    }
-
-    /* Styles for Messages You Send */
-    .message.sent {
-      background: #0084ff;
-      color: white;
-      align-self: flex-end;
-      border-bottom-right-radius: 4px; /* Gives it a chat bubble tail */
-    }
-
-    /* Styles for Messages You Receive */
-    .message.received {
-      background: #f0f0f0;
-      color: #1c1e21;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-    }
-
-    /* The Bottom Input Area */
-    .chat-input-area {
-      display: flex;
-      padding: 15px;
-      border-top: 1px solid #eaeaea;
-      background: #fafafa;
-      gap: 10px;
-    }
-
-    .chat-input-area input {
-      flex: 1;
-      padding: 12px 15px;
-      border: 1px solid #ddd;
-      border-radius: 25px;
-      outline: none;
-      font-size: 0.95rem;
-      transition: border-color 0.2s;
-    }
-
-    .chat-input-area input:focus {
-      border-color: #0084ff;
-    }
-
-    .chat-input-area button {
-      background: #0084ff;
-      color: white;
-      border: none;
-      padding: 0 20px;
-      border-radius: 25px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-
-    .chat-input-area button:hover {
-      background: #0073e6;
-    }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .app-container { width: 100%; max-width: 450px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 85vh; overflow: hidden; }
+    .chat-header { background: #d9534f; color: white; padding: 15px 20px; text-align: center; font-size: 1.1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    .my-profile { font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; }
+    .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .panel.active { display: flex; }
+    .auth-panel { padding: 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; }
+    .auth-panel input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+    .auth-panel button { padding: 10px; background: #d9534f; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .tools-area { padding: 15px; background: #fafafa; border-bottom: 1px solid #eaeaea; display: flex; gap: 10px;}
+    .tools-area input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .tools-area button { padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-color: #ffffff; }
+    .message { max-width: 75%; padding: 10px 14px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; font-size: 0.95rem; }
+    .message.sent { background: #d9534f; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .message.received { background: #f0f0f0; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .chat-input-area { display: flex; padding: 15px; border-top: 1px solid #eaeaea; background: #fafafa; gap: 10px; }
+    .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+    .chat-input-area button { background: #d9534f; color: white; border: none; padding: 0 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+    .warning-banner { background: #ffcc00; color: #333; text-align: center; padding: 10px; font-size: 0.85rem; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <div class="chat-container">
-    <div class="chat-header">
-      Chat App UI
-    </div>
+  <div class="app-container">
+    <div class="warning-banner">⚠️ LOCAL TESTING ONLY: Secret Key in use</div>
     
-    <div class="chat-messages" id="chat-messages">
-      <div class="message received">
-        Hello! This is a static HTML interface. Try typing a message below!
+    <div id="auth-panel" class="panel active auth-panel">
+      <h2 style="text-align:center; margin-top:0;">Login / Register</h2>
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <input type="text" id="username" placeholder="Username (For new accounts)">
+      <button onclick="handleAuth('login')">Login</button>
+      <button onclick="handleAuth('register')" style="background:#28a745;">Register</button>
+    </div>
+
+    <div id="app-panel" class="panel">
+      <div class="chat-header">
+        <span>Chat App</span>
+        <span class="my-profile" id="my-discord-tag">User#0000</span>
       </div>
+      
+      <div class="tools-area">
+        <input type="text" id="friend-search" placeholder="Friend (e.g. John#1234)">
+        <button onclick="sendFriendRequest()">Add Friend</button>
+      </div>
+      
+      <div class="chat-messages" id="chat-messages"></div>
+      
+      <form class="chat-input-area" id="chat-form">
+        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required>
+        <button type="submit">Send</button>
+      </form>
     </div>
-    
-    <form class="chat-input-area" id="chat-form">
-      <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required>
-      <button type="submit">Send</button>
-    </form>
+
   </div>
 
   <script>
+    // 1. Initialize Supabase with the SECRET ROLE KEY
+    const supabaseUrl = 'https://secuuvhgvjdqsxodzgln.supabase.co';
+    
+    // REPLACE THIS WITH YOUR ACTUAL SERVICE_ROLE KEY
+    const supabaseSecretKey = 'sb_secret_Exc67jwlUHCPIpxgkpzD6w_wWE4Lm8a'; 
+    
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
+
+    let currentUser = null;
+    let currentProfile = null;
+    let activeFriendId = null; 
+
+    const authPanel = document.getElementById('auth-panel');
+    const appPanel = document.getElementById('app-panel');
+    const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
-    const chatMessages = document.getElementById('chat-messages');
+    const myTagDisplay = document.getElementById('my-discord-tag');
 
-    // Listen for when the user hits 'Send' or presses Enter
-    chatForm.addEventListener('submit', function(e) {
-      e.preventDefault(); // Prevents the page from refreshing
+    async function handleAuth(action) {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const username = document.getElementById('username').value;
+
+      if (action === 'register') {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) return alert(error.message);
+        
+        const tag = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        // Because you are using the secret key, this insert will NEVER fail due to RLS
+        await supabase.from('profiles').insert([{ id: data.user.id, username: username, tag: tag }]);
+        alert('Registered successfully! Please login.');
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return alert(error.message);
+        
+        currentUser = data.user;
+        await loadProfile();
+        showApp();
+      }
+    }
+
+    async function loadProfile() {
+      const { data } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+      currentProfile = data;
+      myTagDisplay.textContent = `${data.username}#${data.tag}`;
+      subscribeToMessages();
+    }
+
+    function showApp() {
+      authPanel.classList.remove('active');
+      appPanel.classList.add('active');
+    }
+
+    async function sendFriendRequest() {
+      const searchQuery = document.getElementById('friend-search').value.trim();
+      if (!searchQuery.includes('#')) return alert('Use format: Username#1234');
       
+      const [username, tag] = searchQuery.split('#');
+      
+      // Bypasses RLS to search all profiles
+      const { data: friendProfile, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .eq('tag', tag)
+        .single();
+        
+      if (error || !friendProfile) return alert('User not found!');
+      
+      await supabase.from('friends').insert([{
+        sender_id: currentProfile.id,
+        receiver_id: friendProfile.id,
+        status: 'accepted'
+      }]);
+      
+      activeFriendId = friendProfile.id;
+      alert(`Connected with ${searchQuery}! You can now send messages.`);
+      chatMessages.innerHTML = ''; 
+    }
+
+    chatForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
       const text = messageInput.value.trim();
       
-      if (text !== '') {
-        // 1. Create a new div element for the message
-        const messageElement = document.createElement('div');
-        
-        // 2. Add the classes to style it as a sent message
-        messageElement.classList.add('message', 'sent');
-        
-        // 3. Set the text inside the bubble to what the user typed
-        messageElement.textContent = text;
-        
-        // 4. Add the new bubble to the chat window
-        chatMessages.appendChild(messageElement);
-        
-        // 5. Clear the input box for the next message
+      if (text !== '' && activeFriendId) {
+        renderMessage(text, 'sent');
         messageInput.value = '';
-        
-        // 6. Automatically scroll to the bottom so the newest message is visible
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Bypasses RLS to insert messages
+        await supabase.from('messages').insert([{
+          sender_id: currentProfile.id,
+          receiver_id: activeFriendId,
+          content: text
+        }]);
+      } else if (!activeFriendId) {
+        alert("Please add a friend first!");
       }
     });
-  </script>
 
+    function renderMessage(text, type) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('message', type);
+      msgDiv.textContent = text;
+      chatMessages.appendChild(msgDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function subscribeToMessages() {
+      supabase.channel('public:messages')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+          const newMsg = payload.new;
+          if (newMsg.receiver_id === currentProfile.id && newMsg.sender_id === activeFriendId) {
+            renderMessage(newMsg.content, 'received');
+          }
+        })
+        .subscribe();
+    }
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Chat App - Secret Key Version</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .app-container { width: 100%; max-width: 450px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 85vh; overflow: hidden; }
+    .chat-header { background: #d9534f; color: white; padding: 15px 20px; text-align: center; font-size: 1.1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    .my-profile { font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; }
+    .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .panel.active { display: flex; }
+    .auth-panel { padding: 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; }
+    .auth-panel input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+    .auth-panel button { padding: 10px; background: #d9534f; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .tools-area { padding: 15px; background: #fafafa; border-bottom: 1px solid #eaeaea; display: flex; gap: 10px;}
+    .tools-area input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .tools-area button { padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-color: #ffffff; }
+    .message { max-width: 75%; padding: 10px 14px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; font-size: 0.95rem; }
+    .message.sent { background: #d9534f; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .message.received { background: #f0f0f0; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .chat-input-area { display: flex; padding: 15px; border-top: 1px solid #eaeaea; background: #fafafa; gap: 10px; }
+    .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+    .chat-input-area button { background: #d9534f; color: white; border: none; padding: 0 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+    .warning-banner { background: #ffcc00; color: #333; text-align: center; padding: 10px; font-size: 0.85rem; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <div class="warning-banner">⚠️ LOCAL TESTING ONLY: Secret Key in use</div>
+    
+    <div id="auth-panel" class="panel active auth-panel">
+      <h2 style="text-align:center; margin-top:0;">Login / Register</h2>
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <input type="text" id="username" placeholder="Username (For new accounts)">
+      <button onclick="handleAuth('login')">Login</button>
+      <button onclick="handleAuth('register')" style="background:#28a745;">Register</button>
+    </div>
+
+    <div id="app-panel" class="panel">
+      <div class="chat-header">
+        <span>Chat App</span>
+        <span class="my-profile" id="my-discord-tag">User#0000</span>
+      </div>
+      
+      <div class="tools-area">
+        <input type="text" id="friend-search" placeholder="Friend (e.g. John#1234)">
+        <button onclick="sendFriendRequest()">Add Friend</button>
+      </div>
+      
+      <div class="chat-messages" id="chat-messages"></div>
+      
+      <form class="chat-input-area" id="chat-form">
+        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required>
+        <button type="submit">Send</button>
+      </form>
+    </div>
+
+  </div>
+
+  <script>
+    // 1. Initialize Supabase with the SECRET ROLE KEY
+    const supabaseUrl = 'YOUR_SUPABASE_URL';
+    
+    // REPLACE THIS WITH YOUR ACTUAL SERVICE_ROLE KEY
+    const supabaseSecretKey = 'YOUR_SUPABASE_SERVICE_ROLE_KEY'; 
+    
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
+
+    let currentUser = null;
+    let currentProfile = null;
+    let activeFriendId = null; 
+
+    const authPanel = document.getElementById('auth-panel');
+    const appPanel = document.getElementById('app-panel');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const messageInput = document.getElementById('message-input');
+    const myTagDisplay = document.getElementById('my-discord-tag');
+
+    async function handleAuth(action) {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const username = document.getElementById('username').value;
+
+      if (action === 'register') {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) return alert(error.message);
+        
+        const tag = Math.floor(1000 + Math.random() * 9000).toString();
+        
+        // Because you are using the secret key, this insert will NEVER fail due to RLS
+        await supabase.from('profiles').insert([{ id: data.user.id, username: username, tag: tag }]);
+        alert('Registered successfully! Please login.');
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return alert(error.message);
+        
+        currentUser = data.user;
+        await loadProfile();
+        showApp();
+      }
+    }
+
+    async function loadProfile() {
+      const { data } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+      currentProfile = data;
+      myTagDisplay.textContent = `${data.username}#${data.tag}`;
+      subscribeToMessages();
+    }
+
+    function showApp() {
+      authPanel.classList.remove('active');
+      appPanel.classList.add('active');
+    }
+
+    async function sendFriendRequest() {
+      const searchQuery = document.getElementById('friend-search').value.trim();
+      if (!searchQuery.includes('#')) return alert('Use format: Username#1234');
+      
+      const [username, tag] = searchQuery.split('#');
+      
+      // Bypasses RLS to search all profiles
+      const { data: friendProfile, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .eq('tag', tag)
+        .single();
+        
+      if (error || !friendProfile) return alert('User not found!');
+      
+      await supabase.from('friends').insert([{
+        sender_id: currentProfile.id,
+        receiver_id: friendProfile.id,
+        status: 'accepted'
+      }]);
+      
+      activeFriendId = friendProfile.id;
+      alert(`Connected with ${searchQuery}! You can now send messages.`);
+      chatMessages.innerHTML = ''; 
+    }
+
+    chatForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      
+      if (text !== '' && activeFriendId) {
+        renderMessage(text, 'sent');
+        messageInput.value = '';
+
+        // Bypasses RLS to insert messages
+        await supabase.from('messages').insert([{
+          sender_id: currentProfile.id,
+          receiver_id: activeFriendId,
+          content: text
+        }]);
+      } else if (!activeFriendId) {
+        alert("Please add a friend first!");
+      }
+    });
+
+    function renderMessage(text, type) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('message', type);
+      msgDiv.textContent = text;
+      chatMessages.appendChild(msgDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function subscribeToMessages() {
+      supabase.channel('public:messages')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+          const newMsg = payload.new;
+          if (newMsg.receiver_id === currentProfile.id && newMsg.sender_id === activeFriendId) {
+            renderMessage(newMsg.content, 'received');
+          }
+        })
+        .subscribe();
+    }
+  </script>
 </body>
 </html>
