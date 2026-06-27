@@ -39,21 +39,29 @@
 
   <div class="app-container">
     
+    <!-- PANEL ĐĂNG NHẬP / ĐĂNG KÝ -->
     <div id="auth-panel" class="panel active auth-panel">
-      <h2 style="text-align:center; margin-top:0;">Đăng nhập</h2>
+      <h2 id="auth-title" style="text-align:center; margin-top:0;">Đăng nhập</h2>
       
       <input type="text" id="contact" placeholder="Nhập địa chỉ Email">
       <input type="password" id="password" placeholder="Mật khẩu">
       
+      <!-- Các trường đăng ký mặc định ẩn -->
       <div id="register-fields" class="register-fields">
-        <p class="register-msg">Tài khoản chưa tồn tại. Vui lòng nhập Tên và ID để tạo tài khoản mới.</p>
+        <p class="register-msg">Đang tạo tài khoản mới. Vui lòng nhập thêm các thông tin dưới đây:</p>
         <input type="text" id="username" placeholder="Tên hiển thị (VD: Huy)">
         <input type="text" id="custom-id" placeholder="ID (Bắt buộc 4 số, VD: 1234)" maxlength="4">
       </div>
 
       <button id="auth-btn" onclick="handleAuth()">Đăng nhập</button>
+      
+      <!-- Thêm nút chuyển đổi chế độ rõ ràng -->
+      <p id="toggle-auth-text" style="text-align: center; font-size: 0.9rem; margin-top: 10px; color: #555;">
+        Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: #0084ff; font-weight: bold; text-decoration: none;">Đăng ký ngay</a>
+      </p>
     </div>
 
+    <!-- PANEL CHAT -->
     <div id="app-panel" class="panel">
       <div class="chat-header">
         <span>Tin nhắn</span>
@@ -94,65 +102,85 @@
     
     const registerFields = document.getElementById('register-fields');
     const authBtn = document.getElementById('auth-btn');
+    const authTitle = document.getElementById('auth-title');
+    const toggleAuthText = document.getElementById('toggle-auth-text');
 
-    // Hàm mã hóa mật khẩu bằng SHA-256 (Web Crypto API)
+    // Hàm chuyển đổi giao diện giữa Đăng nhập và Đăng ký
+    function toggleAuthMode(isRegister) {
+      isRegisterMode = isRegister;
+      if (isRegister) {
+        authTitle.textContent = 'Đăng ký tài khoản';
+        registerFields.style.display = 'flex';
+        authBtn.textContent = 'Tạo tài khoản';
+        authBtn.classList.add('register-btn');
+        toggleAuthText.innerHTML = `Đã có tài khoản? <a href="#" onclick="toggleAuthMode(false); return false;" style="color: #0084ff; font-weight: bold; text-decoration: none;">Đăng nhập</a>`;
+      } else {
+        authTitle.textContent = 'Đăng nhập';
+        registerFields.style.display = 'none';
+        authBtn.textContent = 'Đăng nhập';
+        authBtn.classList.remove('register-btn');
+        toggleAuthText.innerHTML = `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: #0084ff; font-weight: bold; text-decoration: none;">Đăng ký ngay</a>`;
+      }
+    }
+
     async function hashPassword(password) {
       const encoder = new TextEncoder();
       const data = encoder.encode(password);
       const hashBuffer = await crypto.subtle.digest('SHA-256', data);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex;
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // Xử lý Đăng nhập / Đăng ký
+    // Hàm xử lý chính
     async function handleAuth() {
       const contact = document.getElementById('contact').value.trim();
       const password = document.getElementById('password').value;
       
       if (!contact || !password) return alert("Vui lòng nhập đầy đủ Email và mật khẩu!");
-
-      const isEmail = contact.includes('@');
-      if (!isEmail) {
-        return alert("Vui lòng nhập một địa chỉ email hợp lệ (phải có ký tự @)!");
-      }
+      if (!contact.includes('@')) return alert("Vui lòng nhập một địa chỉ email hợp lệ!");
 
       const credentials = { email: contact, password: password };
 
       if (!isRegisterMode) {
-        // ĐĂNG NHẬP
+        // ---- TIẾN TRÌNH ĐĂNG NHẬP ----
         const { data, error } = await mySupabaseClient.auth.signInWithPassword(credentials);
         
         if (error) {
-          isRegisterMode = true;
-          registerFields.style.display = 'flex';
-          authBtn.textContent = 'Tạo tài khoản';
-          authBtn.classList.add('register-btn');
-        } else {
-          currentUser = data.user;
-          await loadProfile();
-          showApp();
-        }
-      } 
-      else {
-        // ĐĂNG KÝ MỚI
+          // Thông báo lỗi chính xác thay vì tự chuyển sang đăng ký
+          return alert("Đăng nhập thất bại: Sai tài khoản, mật khẩu hoặc email chưa được xác thực!");
+        } 
+        
+        currentUser = data.user;
+        await loadProfile();
+        showApp();
+
+      } else {
+        // ---- TIẾN TRÌNH ĐĂNG KÝ ----
         const username = document.getElementById('username').value.trim();
         const customId = document.getElementById('custom-id').value.trim();
 
-        const idRegex = /^\d{4}$/;
-        if (!idRegex.test(customId)) {
-          return alert("Lỗi: ID bắt buộc phải là 4 chữ số (Ví dụ: 1234)!");
-        }
+        if (!/^\d{4}$/.test(customId)) return alert("Lỗi: ID bắt buộc phải là 4 chữ số (Ví dụ: 1234)!");
         if (!username) return alert("Vui lòng nhập tên hiển thị!");
 
-        // 1. Tạo tài khoản trong hệ thống Auth của Supabase
+        // 1. Tạo tài khoản Auth
         const { data, error } = await mySupabaseClient.auth.signUp(credentials);
         if (error) return alert("Lỗi tạo tài khoản: " + error.message);
         
-        // 2. Tự động mã hóa mật khẩu trước khi lưu vào bảng Profiles
+        // Cảnh báo nếu Supabase yêu cầu xác nhận Email
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+            return alert("Tài khoản này đã tồn tại! Vui lòng chuyển sang tab Đăng nhập.");
+        }
+        
+        if (data.session === null && data.user) {
+             // Trường hợp yêu cầu xác thực email đang bật trong Supabase
+             alert("Vui lòng kiểm tra email của bạn để xác nhận tài khoản trước khi tiếp tục!");
+             return;
+        }
+        
+        // 2. Mã hóa mật khẩu lưu vào Profiles
         const myPasswordHash = await hashPassword(password);
 
-        // 3. Lưu toàn bộ thông tin (id, tên, tag, email, password_hash) vào DB
+        // 3. Lưu thông tin Profile
         const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ 
           id: data.user.id, 
           username: username, 
@@ -162,21 +190,17 @@
         }]);
 
         if (profileError) {
-          if(profileError.code === '23505') {
-            return alert("Lỗi: Tên và ID này đã có người sử dụng. Vui lòng chọn ID hoặc Tên khác.");
-          }
+          if(profileError.code === '23505') return alert("Lỗi: Tên và ID này đã có người sử dụng. Vui lòng chọn Tên hoặc ID khác.");
           return alert("Lỗi lưu thông tin: " + profileError.message);
         }
         
-        alert('Tạo tài khoản thành công! Hệ thống sẽ tự động đăng nhập.');
+        alert('Tạo tài khoản thành công! Hệ thống đang đăng nhập...');
         
-        isRegisterMode = false;
-        registerFields.style.display = 'none';
-        authBtn.textContent = 'Đăng nhập';
-        authBtn.classList.remove('register-btn');
-        
-        // Tự động đăng nhập sau khi tạo thành công
+        // Đưa giao diện về lại trạng thái chuẩn và tự động đăng nhập
+        toggleAuthMode(false);
         const signInData = await mySupabaseClient.auth.signInWithPassword(credentials);
+        if (signInData.error) return alert("Không thể tự động đăng nhập. Vui lòng thử đăng nhập thủ công!");
+        
         currentUser = signInData.data.user;
         await loadProfile();
         showApp();
@@ -184,7 +208,11 @@
     }
 
     async function loadProfile() {
-      const { data } = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+      const { data, error } = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+      if (error || !data) {
+        alert("Không tìm thấy profile tương ứng với tài khoản này! (Có thể chưa lưu vào bảng profiles)");
+        return;
+      }
       currentProfile = data;
       myTagDisplay.textContent = `${data.username}#${data.tag}`;
       subscribeToMessages();
