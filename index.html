@@ -76,7 +76,7 @@
   </div>
 
   <script>
-    // 1. Cấu hình Supabase (GIỮ NGUYÊN SECRET KEY ĐỂ BYPASS RLS NHƯ BẠN YÊU CẦU)
+    // CHỈ KHAI BÁO SUPABASE 1 LẦN DUY NHẤT Ở ĐÂY
     const supabaseUrl = 'https://secuuvhgvjdqsxodzgln.supabase.co';
     const supabaseSecretKey = 'sb_secret_Exc67jwlUHCPIpxgkpzD6w_wWE4Lm8a'; 
     const supabase = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
@@ -84,7 +84,7 @@
     let currentUser = null;
     let currentProfile = null;
     let activeFriendId = null; 
-    let isRegisterMode = false; // Biến kiểm tra xem đang ở bước đăng nhập hay đăng ký
+    let isRegisterMode = false; 
 
     // Các thẻ HTML
     const authPanel = document.getElementById('auth-panel');
@@ -97,14 +97,13 @@
     const registerFields = document.getElementById('register-fields');
     const authBtn = document.getElementById('auth-btn');
 
-    // 2. Xử lý Đăng nhập / Đăng ký
+    // Xử lý Đăng nhập / Đăng ký
     async function handleAuth() {
       const contact = document.getElementById('contact').value.trim();
       const password = document.getElementById('password').value;
       
       if (!contact || !password) return alert("Vui lòng nhập đầy đủ thông tin liên hệ và mật khẩu!");
 
-      // Kiểm tra xem người dùng nhập email hay số điện thoại
       const isEmail = contact.includes('@');
       const credentials = isEmail ? { email: contact, password: password } : { phone: contact, password: password };
 
@@ -113,8 +112,7 @@
         const { data, error } = await supabase.auth.signInWithPassword(credentials);
         
         if (error) {
-          // Đăng nhập lỗi (Thường do sai mật khẩu hoặc tài khoản chưa tồn tại)
-          // Mở giao diện tạo tài khoản
+          // Mở giao diện tạo tài khoản nếu đăng nhập lỗi
           isRegisterMode = true;
           registerFields.style.display = 'flex';
           authBtn.textContent = 'Tạo tài khoản';
@@ -126,23 +124,20 @@
           showApp();
         }
       } 
-      // NẾU ĐANG Ở CHẾ ĐỘ TẠO TÀI KHOẢN (Đã hiện ô Tên và ID)
+      // NẾU ĐANG Ở CHẾ ĐỘ TẠO TÀI KHOẢN
       else {
         const username = document.getElementById('username').value.trim();
         const customId = document.getElementById('custom-id').value.trim();
 
-        // Validate ID phải là 4 số
         const idRegex = /^\d{4}$/;
         if (!idRegex.test(customId)) {
           return alert("Lỗi: ID bắt buộc phải là 4 chữ số (Ví dụ: 1234)!");
         }
         if (!username) return alert("Vui lòng nhập tên hiển thị!");
 
-        // Tạo tài khoản mới trong hệ thống Auth
         const { data, error } = await supabase.auth.signUp(credentials);
         if (error) return alert("Lỗi tạo tài khoản: " + error.message);
         
-        // Lưu Tên và ID vào bảng profiles
         const { error: profileError } = await supabase.from('profiles').insert([{ 
           id: data.user.id, 
           username: username, 
@@ -158,13 +153,11 @@
         
         alert('Tạo tài khoản thành công! Hệ thống sẽ tự động đăng nhập.');
         
-        // Trở về giao diện đăng nhập và tiến hành đăng nhập luôn
         isRegisterMode = false;
         registerFields.style.display = 'none';
         authBtn.textContent = 'Đăng nhập';
         authBtn.classList.remove('register-btn');
         
-        // Đăng nhập tự động sau khi đăng ký
         const signInData = await supabase.auth.signInWithPassword(credentials);
         currentUser = signInData.data.user;
         await loadProfile();
@@ -185,14 +178,13 @@
       appPanel.classList.add('active');
     }
 
-    // 3. Hệ thống kết bạn
+    // Hệ thống kết bạn
     async function sendFriendRequest() {
       const searchQuery = document.getElementById('friend-search').value.trim();
       if (!searchQuery.includes('#')) return alert('Vui lòng nhập đúng định dạng: Tên#1234');
       
       const [username, tag] = searchQuery.split('#');
       
-      // Tìm kiếm user
       const { data: friendProfile, error } = await supabase
         .from('profiles')
         .select('id')
@@ -203,7 +195,6 @@
       if (error || !friendProfile) return alert('Không tìm thấy người dùng này!');
       if (friendProfile.id === currentProfile.id) return alert('Bạn không thể tự kết bạn với chính mình!');
       
-      // Ghi dữ liệu vào bảng friends
       await supabase.from('friends').insert([{
         sender_id: currentProfile.id,
         receiver_id: friendProfile.id,
@@ -212,10 +203,10 @@
       
       activeFriendId = friendProfile.id;
       alert(`Đã kết nối với ${searchQuery}! Bây giờ bạn có thể nhắn tin.`);
-      chatMessages.innerHTML = ''; // Xóa sạch khung chat cũ
+      chatMessages.innerHTML = ''; 
     }
 
-    // 4. Gửi tin nhắn
+    // Gửi tin nhắn
     chatForm.addEventListener('submit', async function(e) {
       e.preventDefault();
       const text = messageInput.value.trim();
@@ -240,15 +231,14 @@
       msgDiv.classList.add('message', type);
       msgDiv.textContent = text;
       chatMessages.appendChild(msgDiv);
-      chatMessages.scrollTop = chatMessages.scrollHeight; // Tự động cuộn xuống dưới cùng
+      chatMessages.scrollTop = chatMessages.scrollHeight; 
     }
 
-    // 5. Cập nhật tin nhắn Real-time (Thời gian thực)
+    // Cập nhật tin nhắn Real-time
     function subscribeToMessages() {
       supabase.channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
           const newMsg = payload.new;
-          // Nếu tin nhắn gửi đến mình và từ người bạn mình đang mở chat
           if (newMsg.receiver_id === currentProfile.id && newMsg.sender_id === activeFriendId) {
             renderMessage(newMsg.content, 'received');
           }
