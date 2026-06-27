@@ -2,179 +2,329 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ứng Dụng Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Boba Chat 🧋</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .app-container { width: 100%; max-width: 450px; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; flex-direction: column; height: 85vh; overflow: hidden; }
-    .chat-header { background: #0084ff; color: white; padding: 15px 20px; text-align: center; font-size: 1.1rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-    .my-profile { font-size: 0.85rem; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px; }
+    :root {
+      --bg-color: #FDF8F5;       /* Trắng sữa/Be nhạt */
+      --primary: #D4A373;        /* Nâu caramel/Trà sữa */
+      --primary-dark: #B58453;
+      --secondary: #FAEDCD;      /* Vàng bơ */
+      --text-main: #5E3A25;      /* Nâu trân châu */
+      --text-light: #9C7A5D;
+      --white: #FFFFFF;
+      --bubble-sent: #D4A373;
+      --bubble-recv: #FAEDCD;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Nunito', sans-serif; }
     
-    .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
-    .panel.active { display: flex; }
+    body { 
+      background-color: #eaddd3; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      height: 100vh; 
+      color: var(--text-main);
+    }
+
+    .app-container { 
+      width: 100%; 
+      max-width: 480px; 
+      background: var(--bg-color); 
+      height: 100vh; /* Tối ưu mobile, full màn hình */
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(94, 58, 37, 0.15);
+    }
     
-    .auth-panel { padding: 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; }
-    .auth-panel input { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; outline: none; }
-    .auth-panel input:focus { border-color: #0084ff; }
-    .auth-panel button { padding: 12px; background: #0084ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
-    .auth-panel button.register-btn { background: #28a745; }
+    @media (min-width: 481px) {
+      .app-container { height: 90vh; border-radius: 24px; }
+    }
+
+    /* --- Auth Panel --- */
+    .auth-panel { padding: 40px 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
+    .auth-title { text-align: center; font-size: 2rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; }
+    .auth-subtitle { text-align: center; font-size: 1rem; color: var(--text-light); margin-top: -15px; margin-bottom: 20px; }
     
-    .register-fields { display: none; flex-direction: column; gap: 15px; border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px; }
+    .input-cute { padding: 15px; border: 2px solid #EFE4D8; border-radius: 16px; font-size: 1rem; outline: none; background: var(--white); color: var(--text-main); font-weight: 600; transition: all 0.3s;}
+    .input-cute:focus { border-color: var(--primary); box-shadow: 0 4px 12px rgba(212, 163, 115, 0.2); }
     
-    .tools-area { padding: 15px; background: #fafafa; border-bottom: 1px solid #eaeaea; display: flex; gap: 10px;}
-    .tools-area input { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }
-    .tools-area button { padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-cute { padding: 15px; background: var(--primary); color: var(--white); border: none; border-radius: 16px; cursor: pointer; font-weight: 800; font-size: 1.1rem; transition: background 0.2s; }
+    .btn-cute:active { transform: scale(0.98); }
     
-    .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-color: #ffffff; }
-    .message { max-width: 75%; padding: 10px 14px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; font-size: 0.95rem; }
-    .message.sent { background: #0084ff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-    .message.received { background: #f0f0f0; color: #1c1e21; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .register-fields { display: none; flex-direction: column; gap: 15px; }
     
-    .chat-input-area { display: flex; padding: 15px; border-top: 1px solid #eaeaea; background: #fafafa; gap: 10px; }
-    .chat-input-area input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
-    .chat-input-area button { background: #0084ff; color: white; border: none; padding: 0 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+    .id-container { display: flex; justify-content: space-between; gap: 10px; }
+    .id-box { width: 100%; height: 55px; font-size: 1.5rem; text-align: center; border: 2px solid #EFE4D8; border-radius: 14px; outline: none; font-weight: 800; color: var(--text-main); }
+    .id-box:focus { border-color: var(--primary); background: #FFFBF7; }
+
+    /* --- App Layout --- */
+    .screen { display: none; flex-direction: column; height: 100%; width: 100%; }
+    .screen.active { display: flex; }
+
+    .header-bar { padding: 20px; background: var(--white); border-bottom: 1px solid #EFE4D8; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    .header-title { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
+    
+    /* --- Tab Navigation --- */
+    .tab-content { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+    .tab-pane { display: none; flex-direction: column; }
+    .tab-pane.active { display: flex; }
+
+    .bottom-nav { position: absolute; bottom: 0; width: 100%; height: 70px; background: var(--white); border-top: 1px solid #EFE4D8; display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); border-radius: 20px 20px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.03); z-index: 20;}
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-light); font-weight: 700; font-size: 0.8rem; gap: 4px; cursor: pointer; flex: 1; padding: 10px 0; }
+    .nav-item.active { color: var(--primary); }
+    .nav-icon { font-size: 1.5rem; }
+
+    /* --- Chat List & Friend List --- */
+    .friend-item { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #F5EBE1; cursor: pointer; transition: background 0.2s; background: var(--white); margin: 8px 15px; border-radius: 16px; box-shadow: 0 2px 8px rgba(94, 58, 37, 0.04); }
+    .friend-item:active { background: var(--bg-color); }
+    .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--secondary); background: var(--secondary); }
+    .friend-info { margin-left: 15px; flex: 1; overflow: hidden; }
+    .friend-name { font-weight: 800; font-size: 1.1rem; color: var(--text-main); display: flex; align-items: baseline; justify-content: space-between;}
+    .friend-tag { font-size: 0.8rem; color: var(--primary); background: #FFF4E6; padding: 2px 6px; border-radius: 6px; margin-left: 5px; }
+    .last-msg { font-size: 0.9rem; color: var(--text-light); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+    
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); font-weight: 600; }
+
+    /* --- Profile Tab --- */
+    .profile-header { display: flex; flex-direction: column; align-items: center; padding: 30px 20px; background: var(--white); margin-bottom: 10px; border-radius: 0 0 24px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+    .profile-avatar { width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--primary); margin-bottom: 10px; }
+    .profile-name { font-size: 1.5rem; font-weight: 800; color: var(--text-main); }
+    
+    .add-friend-card { background: var(--white); margin: 15px; padding: 20px; border-radius: 16px; box-shadow: 0 2px 8px rgba(94, 58, 37, 0.04); }
+    .add-friend-card h3 { font-size: 1rem; margin-bottom: 10px; color: var(--text-main); }
+    .add-friend-box { display: flex; gap: 10px; }
+    .add-friend-box input { flex: 1; border-radius: 12px; border: 2px solid #EFE4D8; padding: 10px 15px; outline: none; font-weight: 600;}
+    .add-friend-box button { background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+
+    /* --- Chat Room (Full Screen) --- */
+    .chat-room { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 50; display: none; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    .chat-room.active { display: flex; transform: translateX(0); }
+    
+    .chat-room-header { background: var(--white); padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid #EFE4D8; gap: 15px; padding-top: env(safe-area-inset-top); }
+    .back-btn { background: none; border: none; font-size: 1.5rem; color: var(--primary); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #FFF4E6; }
+    
+    .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .msg-bubble { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 0.95rem; line-height: 1.4; font-weight: 600; word-wrap: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .msg-bubble.sent { background: var(--bubble-sent); color: var(--white); align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg-bubble.received { background: var(--white); color: var(--text-main); border: 1px solid #EFE4D8; align-self: flex-start; border-bottom-left-radius: 4px; }
+    
+    .chat-input-area { padding: 15px; background: var(--white); border-top: 1px solid #EFE4D8; display: flex; gap: 10px; padding-bottom: env(safe-area-inset-bottom); }
+    .chat-input-area input { flex: 1; padding: 12px 20px; border: 2px solid #EFE4D8; border-radius: 24px; outline: none; font-size: 1rem; background: var(--bg-color); }
+    .chat-input-area button { background: var(--primary); color: white; border: none; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
   </style>
 </head>
 <body>
 
   <div class="app-container">
     
-    <!-- PANEL ĐĂNG NHẬP / ĐĂNG KÝ -->
-    <div id="auth-panel" class="panel active auth-panel">
-      <h2 id="auth-title" style="text-align:center; margin-top:0;">Đăng nhập</h2>
+    <!-- MÀN HÌNH ĐĂNG NHẬP / ĐĂNG KÝ -->
+    <div id="auth-screen" class="screen active auth-panel">
+      <div style="text-align: center; margin-bottom: 10px;">
+        <span style="font-size: 4rem;">🧋</span>
+      </div>
+      <h2 id="auth-title" class="auth-title">Xin chào!</h2>
+      <p id="auth-subtitle" class="auth-subtitle">Đăng nhập vào Boba Chat</p>
       
-      <input type="text" id="contact" placeholder="Nhập địa chỉ Email">
-      <input type="password" id="password" placeholder="Mật khẩu">
+      <input type="email" id="contact" class="input-cute" placeholder="Email của bạn">
+      <input type="password" id="password" class="input-cute" placeholder="Mật khẩu">
       
-      <!-- Các trường đăng ký mặc định ẩn -->
       <div id="register-fields" class="register-fields">
-        <input type="text" id="username" placeholder="Tên hiển thị (VD: Huy)">
-        <input type="text" id="custom-id" placeholder="ID (Bắt buộc 4 số, VD: 1234)" maxlength="4">
+        <input type="text" id="username" class="input-cute" placeholder="Tên hiển thị (VD: Huy)">
+        <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: -10px; font-weight: bold;">Nhập ID 4 số của bạn:</p>
+        <div class="id-container">
+          <input type="text" maxlength="1" class="id-box">
+          <input type="text" maxlength="1" class="id-box">
+          <input type="text" maxlength="1" class="id-box">
+          <input type="text" maxlength="1" class="id-box">
+        </div>
       </div>
 
-      <button id="auth-btn" onclick="handleAuth()">Đăng nhập</button>
+      <button id="auth-btn" class="btn-cute" onclick="handleAuth()">Đăng nhập</button>
       
-      <!-- Nút chuyển đổi chế độ rõ ràng -->
-      <p id="toggle-auth-text" style="text-align: center; font-size: 0.9rem; margin-top: 10px; color: #555;">
-        Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: #0084ff; font-weight: bold; text-decoration: none;">Đăng ký ngay</a>
+      <p id="toggle-auth-text" style="text-align: center; font-size: 0.95rem; margin-top: 10px; font-weight: 600;">
+        Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng ký ngay</a>
       </p>
     </div>
 
-    <!-- PANEL CHAT -->
-    <div id="app-panel" class="panel">
-      <div class="chat-header">
-        <span>Tin nhắn</span>
-        <span class="my-profile" id="my-discord-tag">Tên#0000</span>
+
+    <!-- MÀN HÌNH CHÍNH (CÓ 2 TAB) -->
+    <div id="main-screen" class="screen">
+      
+      <!-- TAB ĐOẠN CHAT -->
+      <div id="tab-chats" class="tab-pane active">
+        <div class="header-bar">
+          <span class="header-title">Đoạn chat 💬</span>
+        </div>
+        <div class="tab-content" id="chat-list-container">
+          <div class="empty-state">Đang tải danh sách...</div>
+        </div>
+      </div>
+
+      <!-- TAB TÀI KHOẢN (HỒ SƠ) -->
+      <div id="tab-account" class="tab-pane">
+        <div class="header-bar">
+          <span class="header-title">Hồ sơ 👤</span>
+          <button onclick="logout()" style="background:none; border:none; color:#d9534f; font-weight:bold; cursor:pointer;">Đăng xuất</button>
+        </div>
+        <div class="tab-content">
+          <div class="profile-header">
+            <img id="my-avatar" class="profile-avatar" src="" alt="Avatar">
+            <div class="profile-name" id="my-name">Tên hiển thị</div>
+            <div style="color: var(--primary); font-weight: 800; background: #FFF4E6; padding: 4px 12px; border-radius: 12px; margin-top: 8px;" id="my-tag">#0000</div>
+          </div>
+
+          <div class="add-friend-card">
+            <h3>Thêm bạn bè mới</h3>
+            <div class="add-friend-box">
+              <input type="text" id="friend-search" placeholder="Nhập Tên#1234">
+              <button onclick="sendFriendRequest()">Thêm</button>
+            </div>
+          </div>
+          
+          <h3 style="margin: 20px 20px 5px 20px; font-size: 1.1rem; color: var(--text-main);">Danh sách bạn bè</h3>
+          <div id="account-friend-list"></div>
+        </div>
+      </div>
+
+      <!-- THANH ĐIỀU HƯỚNG DƯỚI (BOTTOM NAV) -->
+      <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('chats', this)">
+          <span class="nav-icon">💬</span>
+          <span>Tin nhắn</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('account', this)">
+          <span class="nav-icon">👤</span>
+          <span>Tài khoản</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MÀN HÌNH PHÒNG CHAT (FULL SCREEN KHI BẤM VÀO BẠN BÈ) -->
+    <div id="chat-room" class="chat-room">
+      <div class="chat-room-header">
+        <button class="back-btn" onclick="closeChat()">❮</button>
+        <img id="chat-room-avatar" class="avatar" style="width: 45px; height: 45px;" src="" alt="">
+        <div class="friend-name" style="font-size: 1.2rem;" id="chat-room-name">Tên Bạn bè</div>
       </div>
       
-      <div class="tools-area">
-        <input type="text" id="friend-search" placeholder="Tìm bạn (VD: Huy#1234)">
-        <button onclick="sendFriendRequest()">Kết bạn</button>
-      </div>
-      
-      <div class="chat-messages" id="chat-messages"></div>
+      <div class="messages-area" id="messages-area"></div>
       
       <form class="chat-input-area" id="chat-form">
-        <input type="text" id="message-input" placeholder="Nhập tin nhắn..." autocomplete="off" required>
-        <button type="submit">Gửi</button>
+        <input type="text" id="message-input" placeholder="Gửi tin nhắn dễ thương..." autocomplete="off" required>
+        <button type="submit">➤</button>
       </form>
     </div>
 
   </div>
 
   <script>
+    // ----- CẤU HÌNH SUPABASE -----
     const supabaseUrl = 'https://pkkbimyhlruwdlsrgcvy.supabase.co';
     const supabaseSecretKey = 'sb_publishable_gYFKPW27BdH7LcsGq4flCQ_5bHG2dF3'; 
     const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
 
+    // ----- BIẾN TOÀN CỤC -----
     let currentUser = null;
     let currentProfile = null;
     let activeFriendId = null; 
     let isRegisterMode = false; 
+    let friendsList = [];
 
-    const authPanel = document.getElementById('auth-panel');
-    const appPanel = document.getElementById('app-panel');
-    const chatMessages = document.getElementById('chat-messages');
-    const chatForm = document.getElementById('chat-form');
-    const messageInput = document.getElementById('message-input');
-    const myTagDisplay = document.getElementById('my-discord-tag');
-    
-    const registerFields = document.getElementById('register-fields');
-    const authBtn = document.getElementById('auth-btn');
-    const authTitle = document.getElementById('auth-title');
-    const toggleAuthText = document.getElementById('toggle-auth-text');
+    // ----- HÀM TIỆN ÍCH TẠO AVATAR -----
+    // Sử dụng API DiceBear tạo avatar phong cách dễ thương dựa trên Tên
+    function getAvatarUrl(seed) {
+      return `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=FAEDCD`;
+    }
 
-    // Hàm chuyển đổi giao diện giữa Đăng nhập và Đăng ký
+    // ----- LOGIC 4 Ô NHẬP ID -----
+    const idBoxes = document.querySelectorAll('.id-box');
+    idBoxes.forEach((box, i) => {
+      box.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        if (e.target.value !== '' && i < idBoxes.length - 1) {
+          idBoxes[i + 1].focus();
+        }
+      });
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && e.target.value === '' && i > 0) {
+          idBoxes[i - 1].focus();
+        }
+      });
+    });
+
+    function getCustomId() {
+      return Array.from(idBoxes).map(b => b.value).join('');
+    }
+
+    // ----- CHUYỂN ĐỔI CHẾ ĐỘ ĐĂNG NHẬP / ĐĂNG KÝ -----
     function toggleAuthMode(isRegister) {
       isRegisterMode = isRegister;
+      const authTitle = document.getElementById('auth-title');
+      const authSubtitle = document.getElementById('auth-subtitle');
+      const authBtn = document.getElementById('auth-btn');
+      const registerFields = document.getElementById('register-fields');
+      const toggleText = document.getElementById('toggle-auth-text');
+
       if (isRegister) {
-        authTitle.textContent = 'Đăng ký tài khoản';
+        authTitle.textContent = 'Tạo tài khoản';
+        authSubtitle.textContent = 'Trở thành thành viên của Boba Chat';
         registerFields.style.display = 'flex';
         authBtn.textContent = 'Tạo tài khoản';
-        authBtn.classList.add('register-btn');
-        toggleAuthText.innerHTML = `Đã có tài khoản? <a href="#" onclick="toggleAuthMode(false); return false;" style="color: #0084ff; font-weight: bold; text-decoration: none;">Đăng nhập</a>`;
+        toggleText.innerHTML = `Đã có tài khoản? <a href="#" onclick="toggleAuthMode(false); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng nhập</a>`;
+        idBoxes.forEach(b => b.value = ''); // Xóa trắng id box
       } else {
-        authTitle.textContent = 'Đăng nhập';
+        authTitle.textContent = 'Xin chào!';
+        authSubtitle.textContent = 'Đăng nhập vào Boba Chat';
         registerFields.style.display = 'none';
         authBtn.textContent = 'Đăng nhập';
-        authBtn.classList.remove('register-btn');
-        toggleAuthText.innerHTML = `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: #0084ff; font-weight: bold; text-decoration: none;">Đăng ký ngay</a>`;
+        toggleText.innerHTML = `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng ký ngay</a>`;
       }
     }
 
+    // ----- BĂM MẬT KHẨU -----
     async function hashPassword(password) {
       const encoder = new TextEncoder();
       const data = encoder.encode(password);
       const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // Hàm xử lý chính
+    // ----- XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ -----
     async function handleAuth() {
       const contact = document.getElementById('contact').value.trim();
       const password = document.getElementById('password').value;
       
-      if (!contact || !password) return alert("Vui lòng nhập đầy đủ Email và mật khẩu!");
-      if (!contact.includes('@')) return alert("Vui lòng nhập một địa chỉ email hợp lệ!");
-
-      const credentials = { email: contact, password: password };
+      if (!contact || !password) return alert("Vui lòng nhập Email và mật khẩu!");
 
       if (!isRegisterMode) {
-        // ---- ĐĂNG NHẬP ----
-        const { data, error } = await mySupabaseClient.auth.signInWithPassword(credentials);
-        
-        if (error) {
-          return alert("Đăng nhập thất bại: Sai email hoặc mật khẩu!");
-        } 
+        // --- ĐĂNG NHẬP ---
+        const { data, error } = await mySupabaseClient.auth.signInWithPassword({ email: contact, password });
+        if (error) return alert("Sai email hoặc mật khẩu!");
         
         currentUser = data.user;
-        await loadProfile();
-        showApp();
-
+        await loadApp();
       } else {
-        // ---- ĐĂNG KÝ ----
+        // --- ĐĂNG KÝ ---
         const username = document.getElementById('username').value.trim();
-        const customId = document.getElementById('custom-id').value.trim();
+        const customId = getCustomId();
 
-        if (!/^\d{4}$/.test(customId)) return alert("Lỗi: ID bắt buộc phải là 4 chữ số (Ví dụ: 1234)!");
+        if (customId.length !== 4) return alert("Vui lòng nhập đủ 4 số ID!");
         if (!username) return alert("Vui lòng nhập tên hiển thị!");
 
-        // 1. Tạo tài khoản Auth
-        const { data, error } = await mySupabaseClient.auth.signUp(credentials);
+        const { data, error } = await mySupabaseClient.auth.signUp({ email: contact, password });
         if (error) return alert("Lỗi tạo tài khoản: " + error.message);
         
-        // Bắt lỗi nếu bạn quên chưa tắt "Confirm email" trên Supabase
         if (data.session === null && data.user) {
-             alert("Tạo thành công nhưng chưa thể vào App! Vui lòng TẮT tính năng xác nhận Email (Confirm email) trên Supabase nhé.");
-             return;
+             return alert("Vui lòng TẮT tính năng xác nhận Email (Confirm email) trên Supabase nhé.");
         }
         
-        // 2. Mã hóa mật khẩu lưu vào Profiles
         const myPasswordHash = await hashPassword(password);
-
-        // 3. Lưu thông tin Profile
         const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ 
           id: data.user.id, 
           username: username, 
@@ -184,98 +334,236 @@
         }]);
 
         if (profileError) {
-          if(profileError.code === '23505') return alert("Lỗi: Tên và ID này đã có người sử dụng. Vui lòng chọn ID hoặc Tên khác.");
-          return alert("Lỗi lưu thông tin: " + profileError.message);
+          if(profileError.code === '23505') return alert("ID hoặc Tên này đã có người dùng.");
+          return alert("Lỗi lưu hồ sơ!");
         }
         
-        alert('Tạo tài khoản thành công! Hệ thống đang tự động đăng nhập...');
-        
-        // Đưa giao diện về lại trạng thái chuẩn
-        toggleAuthMode(false);
-        document.getElementById('password').value = ''; // Xóa mật khẩu cho an toàn
-        
         currentUser = data.user;
-        await loadProfile();
-        showApp();
+        await loadApp();
       }
     }
 
-    async function loadProfile() {
+    // ----- KHỞI TẠO APP -----
+    async function loadApp() {
+      // 1. Tải Profile của mình
       const { data, error } = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-      if (error || !data) {
-        alert("Lỗi tải thông tin Profile!");
-        return;
-      }
+      if (error || !data) return alert("Lỗi tải thông tin cá nhân!");
+      
       currentProfile = data;
-      myTagDisplay.textContent = `${data.username}#${data.tag}`;
+      
+      // Đổ dữ liệu vào Tab Tài Khoản
+      document.getElementById('my-name').textContent = data.username;
+      document.getElementById('my-tag').textContent = `#${data.tag}`;
+      document.getElementById('my-avatar').src = getAvatarUrl(data.username + data.tag);
+
+      // Chuyển màn hình
+      document.getElementById('auth-screen').classList.remove('active');
+      document.getElementById('main-screen').classList.add('active');
+      
+      // 2. Tải danh sách bạn bè
+      await loadFriendsData();
+      
+      // 3. Lắng nghe tin nhắn mới theo thời gian thực
       subscribeToMessages();
     }
 
-    function showApp() {
-      authPanel.classList.remove('active');
-      appPanel.classList.add('active');
+    // ----- CHUYỂN ĐỔI TAB (CHAT / ACCOUNT) -----
+    function switchTab(tabName, element) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      element.classList.add('active');
+
+      if (tabName === 'chats') loadFriendsData(); // Làm mới danh sách chat
     }
 
+    function logout() {
+      mySupabaseClient.auth.signOut();
+      window.location.reload();
+    }
+
+    // ----- TẢI DANH SÁCH BẠN BÈ VÀ TIN NHẮN CUỐI -----
+    async function loadFriendsData() {
+      // Lấy danh sách ID bạn bè
+      const { data: friends } = await mySupabaseClient.from('friends')
+        .select('sender_id, receiver_id')
+        .or(`sender_id.eq.${currentProfile.id},receiver_id.eq.${currentProfile.id}`);
+      
+      if (!friends || friends.length === 0) {
+        document.getElementById('chat-list-container').innerHTML = '<div class="empty-state">Chưa có cuộc trò chuyện nào.<br>Hãy sang tab Tài khoản để thêm bạn nhé!</div>';
+        document.getElementById('account-friend-list').innerHTML = '<div class="empty-state">Chưa có bạn bè.</div>';
+        return;
+      }
+
+      // Lọc ra ID của đối phương
+      const friendIds = friends.map(f => f.sender_id === currentProfile.id ? f.receiver_id : f.sender_id);
+      
+      // Lấy Profile của các ID đó
+      const { data: profiles } = await mySupabaseClient.from('profiles').select('*').in('id', friendIds);
+      friendsList = profiles || [];
+
+      renderFriendLists();
+    }
+
+    async function renderFriendLists() {
+      const chatListContainer = document.getElementById('chat-list-container');
+      const accountListContainer = document.getElementById('account-friend-list');
+      
+      chatListContainer.innerHTML = '';
+      accountListContainer.innerHTML = '';
+
+      for (const friend of friendsList) {
+        const avatarUrl = getAvatarUrl(friend.username + friend.tag);
+        
+        // --- Render bên Tab Tài Khoản (Chỉ hiện tên) ---
+        const accItem = document.createElement('div');
+        accItem.className = 'friend-item';
+        accItem.innerHTML = `
+          <img class="avatar" src="${avatarUrl}" alt="avt">
+          <div class="friend-info">
+            <div class="friend-name">${friend.username} <span class="friend-tag">#${friend.tag}</span></div>
+          </div>
+        `;
+        accountListContainer.appendChild(accItem);
+
+        // --- Render bên Tab Chat (Lấy tin nhắn cuối cùng) ---
+        const chatItem = document.createElement('div');
+        chatItem.className = 'friend-item';
+        chatItem.onclick = () => openChatRoom(friend);
+
+        // Lấy tin nhắn cuối cùng (Thao tác đơn giản hóa cho Client)
+        const { data: lastMsgData } = await mySupabaseClient.from('messages')
+          .select('content, sender_id')
+          .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${friend.id}),and(sender_id.eq.${friend.id},receiver_id.eq.${currentProfile.id})`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        let lastMsgText = 'Bấm để nhắn tin...';
+        if (lastMsgData && lastMsgData.length > 0) {
+          const isMe = lastMsgData[0].sender_id === currentProfile.id;
+          lastMsgText = (isMe ? 'Bạn: ' : '') + lastMsgData[0].content;
+        }
+
+        chatItem.innerHTML = `
+          <img class="avatar" src="${avatarUrl}" alt="avt">
+          <div class="friend-info">
+            <div class="friend-name">${friend.username}</div>
+            <div class="last-msg" id="last-msg-${friend.id}">${lastMsgText}</div>
+          </div>
+        `;
+        chatListContainer.appendChild(chatItem);
+      }
+    }
+
+    // ----- THÊM BẠN BÈ -----
     async function sendFriendRequest() {
       const searchQuery = document.getElementById('friend-search').value.trim();
-      if (!searchQuery.includes('#')) return alert('Vui lòng nhập đúng định dạng: Tên#1234');
+      if (!searchQuery.includes('#')) return alert('Nhập đúng định dạng: Tên#1234');
       
       const [username, tag] = searchQuery.split('#');
       
       const { data: friendProfile, error } = await mySupabaseClient
-        .from('profiles')
-        .select('id')
-        .eq('username', username)
-        .eq('tag', tag)
-        .single();
+        .from('profiles').select('id').eq('username', username).eq('tag', tag).single();
         
       if (error || !friendProfile) return alert('Không tìm thấy người dùng này!');
-      if (friendProfile.id === currentProfile.id) return alert('Bạn không thể tự kết bạn với chính mình!');
+      if (friendProfile.id === currentProfile.id) return alert('Không thể tự kết bạn với chính mình!');
       
+      // Kiểm tra xem đã kết bạn chưa
+      const isExist = friendsList.find(f => f.id === friendProfile.id);
+      if (isExist) return alert("Hai người đã là bạn bè rồi!");
+
       await mySupabaseClient.from('friends').insert([{
         sender_id: currentProfile.id,
         receiver_id: friendProfile.id,
         status: 'accepted'
       }]);
       
-      activeFriendId = friendProfile.id;
-      alert(`Đã kết nối với ${searchQuery}! Bây giờ bạn có thể nhắn tin.`);
-      chatMessages.innerHTML = ''; 
+      alert(`Đã thêm ${searchQuery} vào danh sách bạn bè!`);
+      document.getElementById('friend-search').value = '';
+      loadFriendsData(); // Tải lại danh sách
     }
 
-    chatForm.addEventListener('submit', async function(e) {
+    // ----- PHÒNG CHAT (FULL SCREEN) -----
+    async function openChatRoom(friend) {
+      activeFriendId = friend.id;
+      document.getElementById('chat-room-name').textContent = friend.username;
+      document.getElementById('chat-room-avatar').src = getAvatarUrl(friend.username + friend.tag);
+      
+      const room = document.getElementById('chat-room');
+      room.classList.add('active');
+      
+      // Load lịch sử tin nhắn
+      const messagesArea = document.getElementById('messages-area');
+      messagesArea.innerHTML = '<div class="empty-state">Đang tải tin nhắn...</div>';
+
+      const { data: msgs } = await mySupabaseClient.from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${friend.id}),and(sender_id.eq.${friend.id},receiver_id.eq.${currentProfile.id})`)
+        .order('created_at', { ascending: true });
+
+      messagesArea.innerHTML = '';
+      if (msgs && msgs.length > 0) {
+        msgs.forEach(msg => {
+          renderMessage(msg.content, msg.sender_id === currentProfile.id ? 'sent' : 'received');
+        });
+      }
+    }
+
+    function closeChat() {
+      document.getElementById('chat-room').classList.remove('active');
+      activeFriendId = null;
+      loadFriendsData(); // Làm mới danh sách để cập nhật tin nhắn cuối
+    }
+
+    // ----- GỬI VÀ NHẬN TIN NHẮN -----
+    document.getElementById('chat-form').addEventListener('submit', async function(e) {
       e.preventDefault();
-      const text = messageInput.value.trim();
+      const input = document.getElementById('message-input');
+      const text = input.value.trim();
       
       if (text !== '' && activeFriendId) {
         renderMessage(text, 'sent');
-        messageInput.value = '';
+        input.value = '';
+        
+        // Kéo mượt xuống cuối
+        const area = document.getElementById('messages-area');
+        area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
 
         await mySupabaseClient.from('messages').insert([{
           sender_id: currentProfile.id,
           receiver_id: activeFriendId,
           content: text
         }]);
-      } else if (!activeFriendId) {
-        alert("Vui lòng tìm và kết bạn trước khi nhắn tin!");
       }
     });
 
     function renderMessage(text, type) {
       const msgDiv = document.createElement('div');
-      msgDiv.classList.add('message', type);
+      msgDiv.classList.add('msg-bubble', type);
       msgDiv.textContent = text;
-      chatMessages.appendChild(msgDiv);
-      chatMessages.scrollTop = chatMessages.scrollHeight; 
+      
+      const area = document.getElementById('messages-area');
+      area.appendChild(msgDiv);
+      area.scrollTop = area.scrollHeight; 
     }
 
     function subscribeToMessages() {
       mySupabaseClient.channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
           const newMsg = payload.new;
+          
+          // Nếu đang mở khung chat đúng với người gửi -> Render tin nhắn luôn
           if (newMsg.receiver_id === currentProfile.id && newMsg.sender_id === activeFriendId) {
             renderMessage(newMsg.content, 'received');
+            const area = document.getElementById('messages-area');
+            area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
           }
+          
+          // Nếu đang ở màn hình ngoài, tự động cập nhật tin nhắn cuối cùng (nếu muốn realtime list)
+          const lastMsgElement = document.getElementById(`last-msg-${newMsg.sender_id}`);
+          if (lastMsgElement) lastMsgElement.textContent = newMsg.content;
+          
         })
         .subscribe();
     }
