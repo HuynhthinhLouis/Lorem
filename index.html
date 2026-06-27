@@ -42,7 +42,7 @@
     <div id="auth-panel" class="panel active auth-panel">
       <h2 style="text-align:center; margin-top:0;">Đăng nhập</h2>
       
-      <input type="text" id="contact" placeholder="Email hoặc Số điện thoại">
+      <input type="text" id="contact" placeholder="Nhập địa chỉ Email">
       <input type="password" id="password" placeholder="Mật khẩu">
       
       <div id="register-fields" class="register-fields">
@@ -76,7 +76,6 @@
   </div>
 
   <script>
-    // Đã đổi tên biến thành mySupabaseClient để tránh trùng lặp hoàn toàn
     const supabaseUrl = 'https://secuuvhgvjdqsxodzgln.supabase.co';
     const supabaseSecretKey = 'sb_publishable_4qQ0WccBsEkUcqqN5FDkEQ_fpmHiyOY'; 
     const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
@@ -102,10 +101,16 @@
       const contact = document.getElementById('contact').value.trim();
       const password = document.getElementById('password').value;
       
-      if (!contact || !password) return alert("Vui lòng nhập đầy đủ thông tin liên hệ và mật khẩu!");
+      if (!contact || !password) return alert("Vui lòng nhập đầy đủ Email và mật khẩu!");
 
+      // Bắt buộc phải nhập Email
       const isEmail = contact.includes('@');
-      const credentials = isEmail ? { email: contact, password: password } : { phone: contact, password: password };
+      if (!isEmail) {
+        return alert("Vui lòng nhập một địa chỉ email hợp lệ (phải có ký tự @)!");
+      }
+
+      // Chỉ sử dụng email
+      const credentials = { email: contact, password: password };
 
       if (!isRegisterMode) {
         const { data, error } = await mySupabaseClient.auth.signInWithPassword(credentials);
