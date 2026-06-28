@@ -213,9 +213,19 @@
     .chat-room-header { background: var(--bg-glass-heavy); backdrop-filter: blur(10px); padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid var(--glass-border); gap: 15px; padding-top: max(15px, env(safe-area-inset-top)); box-shadow: 0 2px 10px rgba(0,0,0,0.02);}
     .back-btn { background: var(--white); border: 1px solid var(--glass-border); font-size: 1.2rem; color: var(--primary); cursor: pointer; width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s;}
     .back-btn:active { transform: scale(0.9); }
-    
+    .nickname-btn { background: transparent; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-light); transition: transform 0.2s; padding: 0 5px; }
+    .nickname-btn:hover { transform: scale(1.2); color: var(--primary); }
+
     .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; position: relative; scroll-behavior: smooth;}
     
+    /* Giao diện Reply Tin nhắn giống Messenger */
+    .reply-preview-container { display: none; background: var(--bg-glass-heavy); border-left: 4px solid var(--primary); padding: 8px 15px; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; border-top: 1px solid var(--glass-border); }
+    .reply-preview-content { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--text-main); }
+    .reply-preview-close { font-size: 1.1rem; cursor: pointer; font-weight: bold; color: var(--text-light); padding: 0 5px; }
+
+    .msg-reply-node { font-size: 0.8rem; background: rgba(0,0,0,0.06); padding: 5px 10px; border-radius: 12px; margin-bottom: 4px; max-width: 100%; color: var(--text-light); font-style: italic; border-left: 3px solid var(--primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    body.dark-mode .msg-reply-node { background: rgba(255,255,255,0.08); }
+
     /* Message Bubbles - Ngăn bôi đen khi nhấn giữ */
     .msg-wrapper { 
       display: flex; flex-direction: column; max-width: 78%; position: relative; cursor: pointer; 
@@ -229,7 +239,7 @@
     .msg-wrapper.received .msg-bubble { background: var(--bubble-recv); backdrop-filter: blur(5px); color: var(--text-main); border: 1px solid var(--glass-border); border-bottom-left-radius: 6px; }
     
     .msg-img { max-width: 220px; border-radius: 16px; margin-top: 5px; cursor: pointer; border: 2px solid var(--white); box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
-    .msg-sticker { font-size: 4.5rem; line-height: 1; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1)); }
+    .msg-sticker { max-width: 140px; height: auto; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.12)); margin: 4px 0; border-radius: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
     
     .reaction-badge { position: absolute; bottom: -12px; right: -5px; background: var(--white); border-radius: 20px; padding: 3px 6px; font-size: 0.85rem; box-shadow: 0 3px 8px rgba(0,0,0,0.12); border: 1px solid var(--glass-border); z-index: 2;}
     .msg-wrapper.received .reaction-badge { right: auto; left: -5px; }
@@ -243,10 +253,16 @@
     .chat-input-area button[type="submit"] { background: var(--primary); color: white; border: none; width: 46px; height: 46px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(212, 163, 115, 0.4); transition: transform 0.2s;}
     .chat-input-area button[type="submit"]:active { transform: scale(0.9); }
     
-    .sticker-panel { display: none; position: absolute; bottom: 85px; left: 15px; background: var(--bg-glass-heavy); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 15px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); gap: 12px; flex-wrap: wrap; width: 260px; z-index: 60;}
+    /* Làm lại Sticker Panel kiểu Messenger / Zalo */
+    .sticker-panel { display: none; position: absolute; bottom: 85px; left: 15px; right: 15px; background: var(--bg-glass-heavy); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 -10px 30px rgba(0,0,0,0.12); flex-direction: column; height: 280px; z-index: 60; overflow: hidden; }
     .sticker-panel.active { display: flex; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
-    .sticker-item { font-size: 2.2rem; cursor: pointer; transition: transform 0.2s; }
-    .sticker-item:hover, .sticker-item:active { transform: scale(1.25); }
+    .sticker-tabs { display: flex; background: rgba(0,0,0,0.03); border-bottom: 1px solid var(--glass-border); overflow-x: auto; padding: 5px 10px; gap: 8px; }
+    body.dark-mode .sticker-tabs { background: rgba(255,255,255,0.05); }
+    .sticker-tab-btn { padding: 6px 12px; font-size: 1.1rem; cursor: pointer; border-radius: 12px; border: none; background: transparent; font-weight: bold; color: var(--text-light); transition: all 0.2s; white-space: nowrap; }
+    .sticker-tab-btn.active { background: var(--primary); color: #fff; }
+    .sticker-grid-content { flex: 1; overflow-y: auto; padding: 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; justify-items: center; align-items: center; }
+    .sticker-item-img { width: 65px; height: 65px; cursor: pointer; transition: transform 0.2s; object-fit: contain; }
+    .sticker-item-img:hover, .sticker-item-img:active { transform: scale(1.18); }
     @keyframes slideUp { from { opacity: 0; transform: translateY(15px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
   </style>
@@ -394,23 +410,26 @@
       <div class="chat-room-header">
         <button class="back-btn" onclick="closeChat()">❮</button>
         <img id="chat-room-avatar" class="avatar" style="width: 46px; height: 46px;" src="">
-        <div class="friend-name" style="font-size: 1.25rem;">
+        <div class="friend-name" style="font-size: 1.25rem; flex: 1; margin-left: 10px;">
           <span id="chat-room-name"></span>
           <span id="chat-room-rank" class="rank-badge" style="display:none; font-size:0.65rem;"></span>
         </div>
+        <!-- Nút đặt biệt danh -->
+        <button class="nickname-btn" onclick="setFriendNickname()" title="Đặt biệt danh">✏️</button>
       </div>
       
       <div class="messages-area" id="messages-area"></div>
       
+      <!-- Preview giao diện reply tin nhắn -->
+      <div class="reply-preview-container" id="reply-preview-container">
+        <div class="reply-preview-content" id="reply-preview-content">Đang trả lời...</div>
+        <div class="reply-preview-close" onclick="cancelReplyMode()">✕</div>
+      </div>
+
+      <!-- Sticker Panel làm lại chuẩn phong cách Zalo/Messenger -->
       <div class="sticker-panel" id="sticker-panel">
-        <div class="sticker-item" onclick="sendSticker('🐻')">🐻</div>
-        <div class="sticker-item" onclick="sendSticker('🐰')">🐰</div>
-        <div class="sticker-item" onclick="sendSticker('🐱')">🐱</div>
-        <div class="sticker-item" onclick="sendSticker('💖')">💖</div>
-        <div class="sticker-item" onclick="sendSticker('🌸')">🌸</div>
-        <div class="sticker-item" onclick="sendSticker('🧋')">🧋</div>
-        <div class="sticker-item" onclick="sendSticker('😂')">😂</div>
-        <div class="sticker-item" onclick="sendSticker('😭')">😭</div>
+        <div class="sticker-tabs" id="sticker-tabs"></div>
+        <div class="sticker-grid-content" id="sticker-grid-content"></div>
       </div>
 
       <div class="chat-input-area">
@@ -484,62 +503,160 @@
     // BIẾN CHO HỆ THỐNG RANK
     let currentRank = null; 
     let appFunctionsList = [];
-
-    // BIẾN LƯU NHỮNG TÍNH NĂNG ĐÃ ĐƯỢC NGƯỜI DÙNG XÁC NHẬN "ĐỒNG Ý"
     const acceptedExperimentalFeatures = [];
 
-    async function updateSettings() {
-      const theme = document.getElementById('setting-theme').value;
-      const fontSize = document.getElementById('setting-fontsize').value;
-      const lang = document.getElementById('setting-language').value;
+    // BIẾN PHỤC VỤ TÍNH NĂNG REPLY TIN NHẮN
+    let replyingMessageId = null;
 
-      localStorage.setItem('boba_theme', theme);
-      localStorage.setItem('boba_fontsize', fontSize);
-      localStorage.setItem('boba_lang', lang);
-      applySettings();
+    // KHO STICKER ĐA DẠNG MỚI (Mèo Ami, QooBee, Line, Shiba, Pepe)
+    const stickerData = {
+      "🐱 Mèo Ami": [
+        "https://media.tenor.com/7-Gk2u11k5oAAAAi/ami-fat-cat.gif",
+        "https://media.tenor.com/E8fL9KxXn7sAAAAi/ami-fat-cat-ami-cat.gif",
+        "https://media.tenor.com/bTf19uE6uGEAAAAi/ami-fat-cat-ami-cat.gif",
+        "https://media.tenor.com/9O0eH1z4xJcAAAAi/ami-fat-cat-ami-cat.gif",
+        "https://media.tenor.com/d_Z1k2BwV5wAAAAi/ami-fat-cat-dancing.gif",
+        "https://media.tenor.com/Kz6w5y41Q0wAAAAi/ami-fat-cat-dance.gif",
+        "https://media.tenor.com/Qp7H0M3Xz0kAAAAi/ami-fat-cat.gif",
+        "https://media.tenor.com/p68i8_IqN_cAAAAi/ami-fat-cat.gif",
+        "https://media.tenor.com/uI6rDkV2wT8AAAAi/ami-fat-cat-crying.gif",
+        "https://media.tenor.com/0F951NqS_CMAAAAi/ami-fat-cat.gif",
+        "https://media.tenor.com/UfK-357A3x0AAAAi/ami-fat-cat.gif",
+        "https://media.tenor.com/O6pB85w72cAAAAAi/ami-fat-cat.gif",
+        "https://media.tenor.com/Bf1B7X7q9vMAAAAi/ami-fat-cat.gif",
+        "https://media.tenor.com/39V_D_y8t_MAAAAi/ami-fat-cat.gif",
+        "https://media.tenor.com/B9M2rBty_5oAAAAi/ami-fat-cat-ami-cat.gif",
+        "https://media.tenor.com/b4z3zFw0jFMAAAAi/ami-fat-cat-cat.gif"
+      ],
+      "🐉 QooBee": [
+        "https://media.tenor.com/6ZEDiX4s5W8AAAAi/qoobee-agapi.gif",
+        "https://media.tenor.com/aA7v5H9V_rEAAAAi/qoobee-kiss.gif",
+        "https://media.tenor.com/PZcGBG5rW9sAAAAi/qoobee-sad.gif",
+        "https://media.tenor.com/R_vQG0Sg8g0AAAAi/qoobee-eating.gif",
+        "https://media.tenor.com/wE6iLgTz6v0AAAAi/qoobee-agapi.gif",
+        "https://media.tenor.com/T0T_8Lp5ZKwAAAAi/qoobee-agapi.gif",
+        "https://media.tenor.com/1G6V-M1BvO8AAAAi/qoobee-agapi.gif",
+        "https://media.tenor.com/O61w0yHWeO8AAAAi/qoobee-agapi.gif"
+      ],
+      "🐻 Gấu Thỏ": [
+        "https://media.tenor.com/4q-JIn7PzR0AAAAi/brown-cony.gif",
+        "https://media.tenor.com/9C3IeI_rL4EAAAAi/cony-brown.gif",
+        "https://media.tenor.com/pZ_t2w5L1pMAAAAi/brown-bear.gif",
+        "https://media.tenor.com/s6Wz82P3b7EAAAAi/cony-rabbit.gif",
+        "https://media.tenor.com/U7D_x7tSStEAAAAi/line-friends.gif",
+        "https://media.tenor.com/X-5kM0N-zPIAAAAi/line-friends.gif",
+        "https://media.tenor.com/2sXF5K5Yh4AAAAAi/brown-bear-kiss.gif",
+        "https://media.tenor.com/7bL_h_S4U3UAAAAi/cony-line.gif"
+      ],
+      "🐶 Shiba Ngáo": [
+        "https://media.tenor.com/XF9xJ4b9XzQAAAAi/shiba-doge.gif",
+        "https://media.tenor.com/vH4B65tYm_0AAAAi/shiba.gif",
+        "https://media.tenor.com/V2w5a3o7CbwAAAAi/shiba-inu.gif",
+        "https://media.tenor.com/f7jYyqjU82cAAAAi/shiba-inu.gif",
+        "https://media.tenor.com/gK9qS12P6W8AAAAi/shiba.gif",
+        "https://media.tenor.com/p9sA636p6_UAAAAi/shiba-inu.gif",
+        "https://media.tenor.com/iPst07f7q8UAAAAi/dog-shiba-inu.gif",
+        "https://media.tenor.com/xV-mF6H83b0AAAAi/shiba.gif"
+      ],
+      "🐸 Pepe": [
+         "https://media.tenor.com/O6u1yI1z-lAAAAAi/pepe-dance.gif",
+         "https://media.tenor.com/T_7U2XkFkIEAAAAi/pepe-crying.gif",
+         "https://media.tenor.com/Zf6m2f_J2Y4AAAAi/pepe-sad.gif",
+         "https://media.tenor.com/6XqG_9zQd7sAAAAi/pepe-ok.gif",
+         "https://media.tenor.com/8xG1hX5-LfkAAAAi/pepe-frog.gif",
+         "https://media.tenor.com/lZJ9h7w1XWMAAAAi/pepe-laugh.gif",
+         "https://media.tenor.com/Z8vYQ4k42yQAAAAi/pepe.gif",
+         "https://media.tenor.com/2gW0X-f19y0AAAAi/pepe.gif"
+      ]
+    };
 
-      if (currentUser) {
-        await mySupabaseClient.from('profiles').update({
-          theme: theme, font_size: fontSize, language: lang
-        }).eq('id', currentUser.id);
+    function initStickerPanel() {
+      const tabsContainer = document.getElementById('sticker-tabs');
+      tabsContainer.innerHTML = '';
+      let isFirst = true;
+
+      for (let category in stickerData) {
+        const btn = document.createElement('button');
+        btn.className = `sticker-tab-btn ${isFirst ? 'active' : ''}`;
+        btn.textContent = category;
+        btn.onclick = () => switchStickerCategory(category, btn);
+        tabsContainer.appendChild(btn);
+        if(isFirst) { loadStickerGrid(category); isFirst = false; }
       }
     }
-    
-    applySettings();
 
-    function createBobas() {
-      const bg = document.getElementById('boba-bg');
-      bg.innerHTML = ''; 
-      const icons = ['🧋', '🌸', '✨', '🤍', '🍡'];
-      for (let i = 0; i < 40; i++) {
-        const icon = document.createElement('div');
-        icon.className = 'boba-icon-blur';
-        icon.innerText = icons[Math.floor(Math.random() * icons.length)];
-        icon.style.left = Math.random() * 100 + 'vw';
-        icon.style.top = Math.random() * 100 + 'vh';
-        icon.style.fontSize = (Math.random() * 1.5 + 1.8) + 'rem';
-        icon.style.animationDuration = (Math.random() * 4 + 4) + 's';
-        icon.style.animationDelay = `-${Math.random() * 3}s`;
-        bg.appendChild(icon);
+    function switchStickerCategory(category, btnElement) {
+      document.querySelectorAll('.sticker-tab-btn').forEach(b => b.classList.remove('active'));
+      btnElement.classList.add('active');
+      loadStickerGrid(category);
+    }
+
+    function loadStickerGrid(category) {
+      const grid = document.getElementById('sticker-grid-content');
+      grid.innerHTML = '';
+      stickerData[category].forEach(url => {
+        const img = document.createElement('img');
+        img.className = 'sticker-item-img';
+        img.src = url;
+        img.onclick = () => sendSticker(url);
+        grid.appendChild(img);
+      });
+    }
+
+    // --- HÀM BIỆT DANH (LOCAL STORAGE ĐỂ TỐI ƯU CƠ SỞ DỮ LIỆU) ---
+    function getNicknameKey(friendId) {
+      return `boba_nick_${currentProfile.id}_${friendId}`;
+    }
+    function getFriendDisplayName(friendId, defaultUsername) {
+      return localStorage.getItem(getNicknameKey(friendId)) || defaultUsername;
+    }
+    function setFriendNickname() {
+      if(!activeFriendId) return;
+      const currentNick = localStorage.getItem(getNicknameKey(activeFriendId)) || "";
+      const newNick = prompt("Nhập biệt danh bạn muốn đặt cho người này:", currentNick);
+      if(newNick !== null) {
+        if(newNick.trim() === "") {
+          localStorage.removeItem(getNicknameKey(activeFriendId));
+        } else {
+          localStorage.setItem(getNicknameKey(activeFriendId), newNick.trim());
+        }
+        showAppNotification("Thành công", "Đã cập nhật biệt danh!");
+        
+        // Refresh UI phòng chat & danh sách
+        const friendObj = friendsList.find(f => f.id === activeFriendId);
+        if(friendObj) {
+          document.getElementById('chat-room-name').textContent = getFriendDisplayName(activeFriendId, friendObj.username);
+        }
+        loadFriendsData();
       }
     }
-    createBobas();
 
-    function showAppNotification(title, message) {
-      const container = document.getElementById('notification-container');
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.innerHTML = `<span style="font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🧋</span>
-        <div class="toast-content"><div class="toast-title">${title}</div><div class="toast-msg">${message}</div></div>`;
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.style.opacity = '0'; toast.style.transform = 'translateY(-30px)';
-        toast.style.transition = 'all 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
-        setTimeout(() => toast.remove(), 400);
-      }, 4500);
+    async function handleFeatureExecution(featureName, callback) {
+      if(!appFunctionsList || appFunctionsList.length === 0) { callback(); return; }
+      const funcInfo = appFunctionsList.find(f => f.name === featureName);
+      if(!funcInfo) { callback(); return; }
+      
+      if(funcInfo.value === 0) { callback(); return; }
+      
+      if(funcInfo.value === 1) {
+        if(currentRank && currentRank.function === 1) {
+          if (!acceptedExperimentalFeatures.includes(featureName)) {
+            const lang = localStorage.getItem('boba_lang');
+            const title = lang === 'en' ? "Experimental Feature" : "Chức năng thử nghiệm";
+            const msg = lang === 'en' ? "This feature is currently in testing and might be unstable. Proceed?" : `Tính năng [${featureName}] đang trong quá trình thử nghiệm. Bạn có muốn tiếp tục sử dụng không?`;
+            
+            const isConfirm = await showAppModal(title, msg, true); 
+            if (!isConfirm) return; 
+            acceptedExperimentalFeatures.push(featureName);
+          }
+          callback();
+        } else {
+          const lang = localStorage.getItem('boba_lang');
+          showAppModal("Chức năng bị khóa", lang === 'en' ? "Your Rank cannot use this feature!" : "Hạng tài khoản của bạn chưa đủ để dùng tính năng này!");
+        }
+      }
     }
 
-    // HÀM SHOW MODAL ĐÃ ĐƯỢC CẬP NHẬT ĐỂ HỖ TRỢ NÚT HỦY
     function showAppModal(title, message, showCancel = false) {
       return new Promise((resolve) => {
         const modal = document.getElementById('app-modal');
@@ -549,23 +666,28 @@
         const cancelBtn = document.getElementById('modal-cancel-btn');
         if(showCancel) {
           cancelBtn.style.display = 'block';
-          cancelBtn.onclick = () => {
-            modal.classList.remove('active');
-            resolve(false); 
-          };
+          cancelBtn.onclick = () => { modal.classList.remove('active'); resolve(false); };
         } else {
           cancelBtn.style.display = 'none';
         }
 
         modal.classList.add('active');
-        document.getElementById('modal-ok-btn').onclick = () => {
-          modal.classList.remove('active');
-          resolve(true); 
-        };
+        document.getElementById('modal-ok-btn').onclick = () => { modal.classList.remove('active'); resolve(true); };
       });
     }
 
-    function getAvatarUrl(seed) { return `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=FAEDCD`; }
+    function createBobas() {
+      const bg = document.getElementById('boba-bg'); bg.innerHTML = ''; 
+      const icons = ['🧋', '🌸', '✨', '🤍', '🍡'];
+      for (let i = 0; i < 40; i++) {
+        const icon = document.createElement('div'); icon.className = 'boba-icon-blur';
+        icon.innerText = icons[Math.floor(Math.random() * icons.length)];
+        icon.style.left = Math.random() * 100 + 'vw'; icon.style.top = Math.random() * 100 + 'vh';
+        icon.style.fontSize = (Math.random() * 1.5 + 1.8) + 'rem'; icon.style.animationDuration = (Math.random() * 4 + 4) + 's';
+        icon.style.animationDelay = `-${Math.random() * 3}s`; bg.appendChild(icon);
+      }
+    }
+    createBobas();
 
     const idBoxes = document.querySelectorAll('.id-box');
     idBoxes.forEach((box, i) => {
@@ -580,150 +702,93 @@
     function getCustomId() { return Array.from(idBoxes).map(b => b.value).join(''); }
 
     function toggleAuthMode(isRegister) {
-      isRegisterMode = isRegister;
-      const lang = localStorage.getItem('boba_lang') || 'vi';
+      isRegisterMode = isRegister; const lang = localStorage.getItem('boba_lang') || 'vi';
       document.getElementById('auth-title').textContent = isRegister ? (lang==='en'?"Register":"Tạo tài khoản") : (lang==='en'?"Welcome!":"Xin chào!");
       document.getElementById('auth-subtitle').textContent = isRegister ? (lang==='en'?"Become a member":"Trở thành thành viên") : (lang==='en'?"Log in to Boba Chat":"Đăng nhập vào Boba Chat");
       document.getElementById('register-fields').style.display = isRegister ? 'flex' : 'none';
       document.getElementById('auth-btn').textContent = isRegister ? (lang==='en'?"Register":"Tạo tài khoản") : (lang==='en'?"Login":"Đăng nhập");
       document.getElementById('toggle-auth-text').innerHTML = isRegister 
-        ? `<span data-i18n="auth_has_acc">${lang==='en'?"Already have an account?":"Đã có tài khoản?"}</span> <a href="#" onclick="toggleAuthMode(false); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">${lang==='en'?"Login":"Đăng nhập"}</a>` 
-        : `<span data-i18n="auth_no_acc">${lang==='en'?"No account?":"Chưa có tài khoản?"}</span> <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">${lang==='en'?"Register":"Đăng ký ngay"}</a>`;
+        ? `<span>${lang==='en'?"Already have an account?":"Đã có tài khoản?"}</span> <a href="#" onclick="toggleAuthMode(false); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">${lang==='en'?"Login":"Đăng nhập"}</a>` 
+        : `<span>${lang==='en'?"No account?":"Chưa có tài khoản?"}</span> <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">${lang==='en'?"Register":"Đăng ký ngay"}</a>`;
     }
 
     async function handleAuth() {
-      const email = document.getElementById('contact').value.trim();
-      const pass = document.getElementById('password').value;
+      const email = document.getElementById('contact').value.trim(); const pass = document.getElementById('password').value;
       if (!email || !pass) { await showAppModal("Khoan đã!", "Nhập đủ thông tin nha!"); return; }
-
       if (!isRegisterMode) {
         const { data, error } = await mySupabaseClient.auth.signInWithPassword({ email: email, password: pass });
         if (error) { await showAppModal("Lỗi rồi", "Sai mật khẩu hoặc email òi!"); return; }
         currentUser = data.user; await loadApp();
       } else {
-        const username = document.getElementById('username').value.trim();
-        const customId = getCustomId();
+        const username = document.getElementById('username').value.trim(); const customId = getCustomId();
         if (customId.length !== 4) { await showAppModal("Khoan đã!", "ID phải đủ 4 số nghen!"); return; }
-        
         const { data, error } = await mySupabaseClient.auth.signUp({ email, password: pass });
         if (error) { await showAppModal("Lỗi", error.message); return; }
-        
-        const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ 
-          id: data.user.id, username, tag: customId, email,
-          theme: localStorage.getItem('boba_theme') || 'light',
-          font_size: localStorage.getItem('boba_fontsize') || '16px',
-          language: localStorage.getItem('boba_lang') || 'vi'
+        await mySupabaseClient.from('profiles').insert([{ 
+          id: data.user.id, username, tag: customId, email, theme: 'light', font_size: '16px', language: 'vi'
         }]);
-        if (profileError) { await showAppModal("Lỗi tạo hồ sơ", "Lỗi: " + profileError.message); return; }
-
         currentUser = data.user; await loadApp();
       }
     }
 
     async function loadApp() {
-      // Truy vấn an toàn kết hợp lấy thông tin RANK của người dùng hiện tại
       let response = await mySupabaseClient.from('profiles').select('*, ranks(name, color, function)').eq('id', currentUser.id).single();
-      
-      // Fallback nếu người dùng chưa tạo các bảng SQL mới
-      if (response.error) {
-        response = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-      }
-      
-      currentProfile = response.data;
-      if(currentProfile.ranks) currentRank = currentProfile.ranks;
+      if (response.error) response = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+      currentProfile = response.data; if(currentProfile.ranks) currentRank = currentProfile.ranks;
 
-      // Lấy danh sách các chức năng (app_functions)
       const funcRes = await mySupabaseClient.from('app_functions').select('*');
       if(!funcRes.error && funcRes.data) appFunctionsList = funcRes.data;
 
-      // Đồng bộ cài đặt
       if(currentProfile.theme) localStorage.setItem('boba_theme', currentProfile.theme);
-      if(currentProfile.font_size) localStorage.setItem('boba_fontsize', currentProfile.font_size);
-      if(currentProfile.language) localStorage.setItem('boba_lang', currentProfile.language);
       applySettings();
 
-      // UI hiển thị Profile
       document.getElementById('my-name').textContent = currentProfile.username;
-      
-      // Hiển thị Badge Rank
       const rankBadge = document.getElementById('my-rank');
       if (currentRank) {
-        rankBadge.style.display = 'inline-block';
-        rankBadge.style.background = currentRank.color;
-        rankBadge.textContent = currentRank.name;
+        rankBadge.style.display = 'inline-block'; rankBadge.style.background = currentRank.color; rankBadge.textContent = currentRank.name;
         document.getElementById('my-name').style.color = currentRank.color;
-      } else {
-        rankBadge.style.display = 'none';
-      }
+      } else { rankBadge.style.display = 'none'; }
 
       document.getElementById('my-tag').textContent = `#${currentProfile.tag}`;
       document.getElementById('my-avatar').src = getAvatarUrl(currentProfile.username + currentProfile.tag);
       document.getElementById('auth-screen').classList.remove('active');
       document.getElementById('main-screen').classList.add('active');
+      
+      initStickerPanel(); // Nạp cấu trúc sticker mới
       await loadFriendsData();
       subscribeToChanges();
     }
-
-    function switchTab(tab, el) {
-      document.querySelectorAll('.tab-pane, .nav-item').forEach(e => e.classList.remove('active'));
-      document.getElementById(`tab-${tab}`).classList.add('active');
-      el.classList.add('active');
-      if(tab === 'account') loadFriendsData();
-    }
-
-    function logout() { mySupabaseClient.auth.signOut(); window.location.reload(); }
 
     async function loadFriendsData() {
       const { data: relations } = await mySupabaseClient.from('friends').select('id, sender_id, receiver_id, status').or(`sender_id.eq.${currentProfile.id},receiver_id.eq.${currentProfile.id}`);
       const reqList = document.getElementById('friend-requests-list'); const accList = document.getElementById('account-friend-list'); const chatList = document.getElementById('chat-list-container');
       reqList.innerHTML = accList.innerHTML = chatList.innerHTML = ''; friendsList = [];
-      const lang = localStorage.getItem('boba_lang');
+      const lang = localStorage.getItem('boba_lang') || 'vi';
 
       if (!relations || relations.length === 0) {
         let emptyTxt = lang === 'en' ? 'Empty...' : 'Trống trơn à...';
-        chatList.innerHTML = accList.innerHTML = reqList.innerHTML = `<div class="empty-state">${emptyTxt}</div>`;
-        return;
+        chatList.innerHTML = accList.innerHTML = reqList.innerHTML = `<div class="empty-state">${emptyTxt}</div>`; return;
       }
 
       for (let rel of relations) {
-        const isSender = rel.sender_id === currentProfile.id;
-        const friendId = isSender ? rel.receiver_id : rel.sender_id;
-        
+        const isSender = rel.sender_id === currentProfile.id; const friendId = isSender ? rel.receiver_id : rel.sender_id;
         let resFriend = await mySupabaseClient.from('profiles').select('*, ranks(name, color)').eq('id', friendId).single();
         if(resFriend.error) resFriend = await mySupabaseClient.from('profiles').select('*').eq('id', friendId).single();
-        
-        const fProfile = resFriend.data;
-        if(!fProfile) continue;
+        const fProfile = resFriend.data; if(!fProfile) continue;
 
         const avatar = getAvatarUrl(fProfile.username + fProfile.tag);
-        
+        const displayName = getFriendDisplayName(fProfile.id, fProfile.username);
+
         let rankHtml = ''; let friendColor = 'inherit';
         if (fProfile.ranks) {
-          friendColor = fProfile.ranks.color;
-          rankHtml = `<span class="rank-badge" style="background: ${fProfile.ranks.color}">${fProfile.ranks.name}</span>`;
+          friendColor = fProfile.ranks.color; rankHtml = `<span class="rank-badge" style="background: ${fProfile.ranks.color}">${fProfile.ranks.name}</span>`;
         }
 
         if (rel.status === 'pending' && !isSender) {
-          reqList.innerHTML += `
-            <div class="friend-item">
-              <img class="avatar" src="${avatar}">
-              <div class="friend-info">
-                <div class="friend-name" style="color:${friendColor}">${fProfile.username} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div>
-                <div class="request-btn-group">
-                  <button class="btn-accept" onclick="respondRequest('${rel.id}', 'accepted')">✔</button>
-                  <button class="btn-reject" onclick="respondRequest('${rel.id}', 'rejected')">✖</button>
-                </div>
-              </div>
-            </div>`;
+          reqList.innerHTML += `<div class="friend-item"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div><div class="request-btn-group"><button class="btn-accept" onclick="respondRequest('${rel.id}', 'accepted')">✔</button><button class="btn-reject" onclick="respondRequest('${rel.id}', 'rejected')">✖</button></div></div></div>`;
         } else if (rel.status === 'accepted') {
           friendsList.push(fProfile);
-          accList.innerHTML += `
-            <div class="friend-item">
-              <img class="avatar" src="${avatar}">
-              <div class="friend-info">
-                <div class="friend-name" style="color:${friendColor}">${fProfile.username} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div>
-              </div>
-            </div>`;
+          accList.innerHTML += `<div class="friend-item"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div></div></div>`;
             
           const { data: lastMsg } = await mySupabaseClient.from('messages').select('content, is_sticker, image_url').or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fProfile.id}),and(sender_id.eq.${fProfile.id},receiver_id.eq.${currentProfile.id})`).order('created_at', { ascending: false }).limit(1);
           let text = lang === 'en' ? 'Tap to chat...' : 'Bấm để chat nè...';
@@ -733,53 +798,25 @@
             else text = lastMsg[0].content;
           }
 
-          chatList.innerHTML += `
-            <div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}', '${friendColor}', '${fProfile.ranks ? fProfile.ranks.name : ''}')">
-              <img class="avatar" src="${avatar}">
-              <div class="friend-info">
-                <div class="friend-name" style="color:${friendColor}">${fProfile.username} ${rankHtml}</div>
-                <div class="last-msg" id="last-msg-${fProfile.id}">${text}</div>
-              </div>
-            </div>`;
+          chatList.innerHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}', '${friendColor}', '${fProfile.ranks ? fProfile.ranks.name : ''}')"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
         }
       }
-      
-      if(reqList.innerHTML === '') reqList.innerHTML = `<div class="empty-state">${lang === 'en' ? 'No requests' : 'Không có lời mời nào'}</div>`;
-      if(accList.innerHTML === '') accList.innerHTML = `<div class="empty-state">${lang === 'en' ? 'No friends yet' : 'Chưa có bạn bè'}</div>`;
-    }
-
-    async function sendFriendRequest() {
-      const q = document.getElementById('friend-search').value.trim();
-      if(!q.includes('#')) { await showAppModal("Sai định dạng", "Ghi đúng định dạng Tên#ID nha!"); return; }
-      const [u, t] = q.split('#');
-      const { data: f } = await mySupabaseClient.from('profiles').select('id').eq('username', u).eq('tag', t).single();
-      if(!f) { await showAppModal("Buồn ghê", "Hổng tìm thấy bạn này :("); return; }
-      if(f.id === currentProfile.id) { await showAppModal("Alo", "Đừng tự kết bạn với chính mình!"); return; }
-
-      await mySupabaseClient.from('friends').insert([{ sender_id: currentProfile.id, receiver_id: f.id, status: 'pending' }]);
-      showAppNotification('Thành công', 'Đã gửi lời mời!'); document.getElementById('friend-search').value = '';
-    }
-
-    async function respondRequest(relId, status) {
-      if(status === 'rejected') await mySupabaseClient.from('friends').delete().eq('id', relId);
-      else await mySupabaseClient.from('friends').update({ status }).eq('id', relId);
-      loadFriendsData();
+      if(reqList.innerHTML === '') reqList.innerHTML = `<div class="empty-state">${lang==='en'?'No requests':'Không có lời mời nào'}</div>`;
+      if(accList.innerHTML === '') accList.innerHTML = `<div class="empty-state">${lang==='en'?'No friends yet':'Chưa có bạn bè'}</div>`;
     }
 
     async function openChat(fid, name, tag, rankColor, rankName) {
       activeFriendId = fid;
-      document.getElementById('chat-room-name').textContent = name;
+      const finalName = getFriendDisplayName(fid, name);
+      document.getElementById('chat-room-name').textContent = finalName;
       document.getElementById('chat-room-name').style.color = rankColor !== 'inherit' ? rankColor : 'var(--primary)';
       document.getElementById('chat-room-avatar').src = getAvatarUrl(name+tag);
-      
+      cancelReplyMode();
+
       const badge = document.getElementById('chat-room-rank');
       if (rankName && rankName !== 'undefined') {
-        badge.style.display = 'inline-block';
-        badge.style.background = rankColor;
-        badge.textContent = rankName;
-      } else {
-        badge.style.display = 'none';
-      }
+        badge.style.display = 'inline-block'; badge.style.background = rankColor; badge.textContent = rankName;
+      } else { badge.style.display = 'none'; }
 
       document.getElementById('chat-room').classList.add('active');
       document.getElementById('sticker-panel').classList.remove('active');
@@ -789,69 +826,60 @@
       if(msgs) msgs.forEach(m => renderMessage(m));
       setTimeout(() => area.scrollTo(0, area.scrollHeight), 150);
     }
-    
+
+    // --- LOGIC PHẢN HỒI TIN NHẮN (REPLY MODE) ---
+    function setReplyMode(msgId, senderName, contentPreview) {
+      replyingMessageId = msgId;
+      const container = document.getElementById('reply-preview-container');
+      const contentEl = document.getElementById('reply-preview-content');
+      contentEl.textContent = `Đang trả lời ${senderName}: "${contentPreview}"`;
+      container.style.display = "flex";
+      document.getElementById('message-input').focus();
+    }
+
+    function cancelReplyMode() {
+      replyingMessageId = null;
+      document.getElementById('reply-preview-container').style.display = "none";
+    }
+
+    function jumpToMessage(msgId) {
+      const target = document.getElementById(`msg-${msgId}`);
+      if(target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.style.outline = "2px dashed var(--primary)";
+        setTimeout(() => target.style.outline = "none", 2000);
+      }
+    }
+
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
-    
-    // --- HÀM XỬ LÝ QUYỀN VÀ CẢNH BÁO THỬ NGHIỆM MỚI ---
-    async function handleFeatureExecution(featureName, callback) {
-      // Bỏ qua nếu chưa cấu hình trong DB
-      if(!appFunctionsList || appFunctionsList.length === 0) { callback(); return; }
-      const funcInfo = appFunctionsList.find(f => f.name === featureName);
-      if(!funcInfo) { callback(); return; }
-      
-      // Chức năng cơ bản (ai cũng dùng được)
-      if(funcInfo.value === 0) {
-        callback(); return;
-      }
-      
-      // Chức năng cần quyền
-      if(funcInfo.value === 1) {
-        if(currentRank && currentRank.function === 1) {
-          
-          // Kiểm tra xem đã chấp nhận rủi ro thử nghiệm chưa
-          if (!acceptedExperimentalFeatures.includes(featureName)) {
-            const lang = localStorage.getItem('boba_lang');
-            const title = lang === 'en' ? "Experimental Feature" : "Chức năng thử nghiệm";
-            const msg = lang === 'en' ? "This feature is currently in testing and might be unstable. Proceed?" : `Tính năng [${featureName}] đang trong quá trình thử nghiệm. Bạn có muốn tiếp tục sử dụng không?`;
-            
-            // Hỏi ý kiến, nếu Hủy thì dừng
-            const isConfirm = await showAppModal(title, msg, true); 
-            if (!isConfirm) return; 
-            
-            // Ghi nhớ để lần sau không hỏi lại
-            acceptedExperimentalFeatures.push(featureName);
-          }
-          
-          callback();
-          
-        } else {
-          const lang = localStorage.getItem('boba_lang');
-          showAppModal("Chức năng bị khóa", lang === 'en' ? "Your Rank cannot use this feature!" : "Hạng tài khoản của bạn chưa đủ để dùng tính năng này!");
-        }
-      }
-    }
-
-    // Gắn hàm check mới vào Sticker và Ảnh
     function toggleStickers() { 
-      handleFeatureExecution('Gửi Sticker', () => {
-        document.getElementById('sticker-panel').classList.toggle('active'); 
-      });
+      handleFeatureExecution('Gửi Sticker', () => { document.getElementById('sticker-panel').classList.toggle('active'); });
     }
-
     function triggerUpload() {
-      handleFeatureExecution('Gửi hình ảnh', () => {
-        document.getElementById('file-upload').click();
-      });
+      handleFeatureExecution('Gửi hình ảnh', () => { document.getElementById('file-upload').click(); });
     }
 
     document.getElementById('chat-form').addEventListener('submit', async (e) => {
       e.preventDefault(); const input = document.getElementById('message-input'); const text = input.value.trim();
-      if(text && activeFriendId) { input.value = ''; await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: text }]); }
+      if(text && activeFriendId) { 
+        input.value = ''; 
+        let finalContent = text;
+        if(replyingMessageId) {
+          finalContent = `[REPLY:${replyingMessageId}] ` + text;
+          cancelReplyMode();
+        }
+        await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: finalContent }]); 
+      }
     });
 
-    async function sendSticker(emoji) {
+    async function sendSticker(url) {
       document.getElementById('sticker-panel').classList.remove('active');
-      if(activeFriendId) await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: emoji, is_sticker: true }]);
+      let finalContent = url;
+      if(replyingMessageId) {
+        finalContent = `[REPLY:${replyingMessageId}] ` + url;
+        cancelReplyMode();
+      }
+      if(activeFriendId) await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: finalContent, is_sticker: true }]);
     }
 
     async function uploadImage(e) {
@@ -861,22 +889,39 @@
       const { error } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
       if(error) { await showAppModal("Lỗi tải ảnh", error.message); return; }
       const imgUrl = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
-      await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: imgUrl }]);
+      
+      let finalImgUrl = imgUrl;
+      if(replyingMessageId) {
+        finalImgUrl = `[REPLY:${replyingMessageId}]` + imgUrl;
+        cancelReplyMode();
+      }
+      await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: finalImgUrl }]);
     }
 
-    // --- REACTION LOGIC ---
-    let activeReactionMsgId = null;
+    async function respondRequest(relId, status) {
+      if(status === 'rejected') await mySupabaseClient.from('friends').delete().eq('id', relId);
+      else await mySupabaseClient.from('friends').update({ status }).eq('id', relId);
+      loadFriendsData();
+    }
+    async function sendFriendRequest() {
+      const q = document.getElementById('friend-search').value.trim();
+      if(!q.includes('#')) { await showAppModal("Sai định dạng", "Ghi đúng định dạng Tên#ID nha!"); return; }
+      const [u, t] = q.split('#');
+      const { data: f } = await mySupabaseClient.from('profiles').select('id').eq('username', u).eq('tag', t).single();
+      if(!f) { await showAppModal("Buồn ghê", "Hổng tìm thấy bạn này :("); return; }
+      if(f.id === currentProfile.id) { await showAppModal("Alo", "Đừng tự kết bạn với chính mình!"); return; }
+      await mySupabaseClient.from('friends').insert([{ sender_id: currentProfile.id, receiver_id: f.id, status: 'pending' }]);
+      showAppNotification('Thành công', 'Đã gửi lời mời!'); document.getElementById('friend-search').value = '';
+    }
 
+    let activeReactionMsgId = null;
     function showReactionPicker(msgId) {
-      activeReactionMsgId = msgId;
-      document.getElementById('reaction-overlay').classList.add('active');
+      activeReactionMsgId = msgId; document.getElementById('reaction-overlay').classList.add('active');
       if (navigator.vibrate) navigator.vibrate(50);
     }
-
     function closeReactionPicker(e) {
       if(e.target.id === 'reaction-overlay') { document.getElementById('reaction-overlay').classList.remove('active'); activeReactionMsgId = null; }
     }
-
     async function submitReaction(emoji) {
       if (activeReactionMsgId) {
         document.getElementById('reaction-overlay').classList.remove('active');
@@ -893,37 +938,54 @@
 
       let pressTimer; let isDragging = false; let lastTap = 0;
 
-      const startPress = () => {
-        isDragging = false;
-        pressTimer = setTimeout(() => showReactionPicker(msg.id), 500); 
-      };
+      const senderName = isMe ? "Bạn" : document.getElementById('chat-room-name').textContent;
+      let pureContent = msg.content || "";
+      if(pureContent.startsWith("[REPLY:")) {
+        pureContent = pureContent.substring(pureContent.indexOf("] ") + 2);
+      }
 
+      const startPress = () => { isDragging = false; pressTimer = setTimeout(() => showReactionPicker(msg.id), 500); };
       wrap.addEventListener('touchstart', startPress, {passive: true});
       wrap.addEventListener('touchmove', () => { isDragging = true; clearTimeout(pressTimer); }, {passive: true});
       wrap.addEventListener('touchend', (e) => {
-        clearTimeout(pressTimer);
-        if (isDragging) return;
-        let currentTime = new Date().getTime();
-        let tapLength = currentTime - lastTap;
+        clearTimeout(pressTimer); if (isDragging) return;
+        let currentTime = new Date().getTime(); let tapLength = currentTime - lastTap;
         if (tapLength < 300 && tapLength > 0) { 
-          mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msg.id);
+          setReplyMode(msg.id, senderName, msg.is_sticker ? "[Sticker]" : (msg.image_url ? "[Hình ảnh]" : pureContent));
           e.preventDefault(); 
         }
         lastTap = currentTime;
       });
-      
       wrap.addEventListener('mousedown', startPress);
       wrap.addEventListener('mouseup', () => clearTimeout(pressTimer));
       wrap.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-      wrap.ondblclick = () => mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msg.id);
+      wrap.ondblclick = () => setReplyMode(msg.id, senderName, msg.is_sticker ? "[Sticker]" : (msg.image_url ? "[Hình ảnh]" : pureContent));
 
-      let contentHTML = msg.is_sticker ? `<div class="msg-bubble msg-sticker">${msg.content}</div>` : 
-                        (msg.image_url ? `<img class="msg-img" src="${msg.image_url}" onclick="window.open('${msg.image_url}')">` : 
-                        `<div class="msg-bubble">${msg.content}</div>`);
+      let replyNodeHTML = "";
+      let rawContent = msg.content || "";
+      let rawImgUrl = msg.image_url || "";
+
+      if(rawContent.startsWith("[REPLY:") || rawImgUrl.startsWith("[REPLY:")) {
+        let targetString = rawContent.startsWith("[REPLY:") ? rawContent : rawImgUrl;
+        let targetId = targetString.substring(7, targetString.indexOf("]"));
+        replyNodeHTML = `<div class="msg-reply-node" onclick="jumpToMessage('${targetId}')">➦ Đang trả lời tin nhắn #${targetId} (Nhấn để xem)</div>`;
+        
+        if(rawContent.startsWith("[REPLY:")) rawContent = rawContent.substring(rawContent.indexOf("] ") + 2);
+        if(rawImgUrl.startsWith("[REPLY:")) rawImgUrl = rawImgUrl.substring(rawImgUrl.indexOf("]") + 1);
+      }
+
+      let mainContentHTML = "";
+      if (msg.is_sticker) {
+        mainContentHTML = `<img class="msg-bubble msg-sticker" src="${rawContent}">`;
+      } else if (rawImgUrl) {
+        mainContentHTML = `<img class="msg-img" src="${rawImgUrl}" onclick="window.open('${rawImgUrl}')">`;
+      } else {
+        mainContentHTML = `<div class="msg-bubble">${rawContent}</div>`;
+      }
 
       let reactionHTML = msg.reaction ? `<div class="reaction-badge">${msg.reaction}</div>` : '';
       
-      wrap.innerHTML = contentHTML + reactionHTML;
+      wrap.innerHTML = replyNodeHTML + mainContentHTML + reactionHTML;
       const area = document.getElementById('messages-area');
       area.appendChild(wrap); area.scrollTop = area.scrollHeight;
     }
@@ -936,7 +998,10 @@
               if (activeFriendId === m.sender_id) renderMessage(m);
               else {
                 const sender = friendsList.find(f => f.id === m.sender_id);
-                showAppNotification(`Tin nhắn từ ${sender ? sender.username : "Bạn bè"}`, m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content));
+                const name = getFriendDisplayName(m.sender_id, sender ? sender.username : "Bạn bè");
+                let displayTxt = m.content;
+                if(displayTxt && displayTxt.startsWith("[REPLY:")) displayTxt = displayTxt.substring(displayTxt.indexOf("] ") + 2);
+                showAppNotification(`Tin nhắn từ ${name}`, m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : displayTxt));
               }
             } else if (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId) renderMessage(m);
           } else if (payload.eventType === 'UPDATE') {
