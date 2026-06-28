@@ -747,11 +747,13 @@
         }
     
     // 1. Tạo tài khoản trên hệ thống Auth
-        const { data, error } = await mySupabaseClient.auth.signUp({ email, password: pass });
-        if (error) { 
-          await showAppModal("Lỗi", error.message); 
-          return; 
+        const { data, error } = await mySupabaseClient.auth.signUp({
+        email: email,
+        password: pass,
+        options: {
+          data: { username: username } // Truyền tên vào user_metadata
         }
+      });
     
     // 2. Đẩy dữ liệu vào bảng profiles (Có bắt lỗi)
           const { error: profileError } = await mySupabaseClient
