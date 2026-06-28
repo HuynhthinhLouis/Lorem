@@ -43,7 +43,7 @@
       to { transform: translateY(-30px) rotate(15deg); }
     }
 
-    /* In-app Toast Notifications (Thông báo nổi bật nhanh) */
+    /* In-app Toast Notifications */
     #notification-container {
       position: fixed; top: max(20px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
       z-index: 99999; width: 90%; max-width: 400px; pointer-events: none;
@@ -62,7 +62,7 @@
     .toast-msg { color: var(--text-main); font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
     @keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* --- GIAO DIỆN THÔNG BÁO TÙY CHỈNH (Thay thế Alert/Prompt của trình duyệt) --- */
+    /* Modal Overlay cho Alert/Prompt & Reactions */
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
       z-index: 100000; background: rgba(94, 58, 37, 0.2); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
@@ -90,6 +90,35 @@
     .modal-btn:active { transform: scale(0.95); }
     .btn-ok { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
     .btn-cancel { background: rgba(255, 244, 230, 0.9); color: var(--text-light); }
+
+    /* --- BẢNG CHỌN REACTION IN-APP --- */
+    #reaction-overlay {
+      z-index: 100001; 
+    }
+    .reaction-box {
+      background: var(--bg-glass-heavy);
+      border: 1px solid var(--glass-border);
+      padding: 15px 25px;
+      border-radius: 30px;
+      display: flex;
+      gap: 15px;
+      box-shadow: 0 10px 40px rgba(94, 58, 37, 0.2);
+      transform: scale(0.8);
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .modal-overlay.active .reaction-box {
+      transform: scale(1);
+    }
+    .reaction-item {
+      font-size: 2.2rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .reaction-item:active, .reaction-item:hover {
+      transform: scale(1.3) translateY(-5px);
+    }
 
     /* App Container */
     .app-container { 
@@ -167,7 +196,7 @@
     .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; position: relative; scroll-behavior: smooth;}
     
     /* Message Bubbles */
-    .msg-wrapper { display: flex; flex-direction: column; max-width: 78%; position: relative; cursor: pointer; }
+    .msg-wrapper { display: flex; flex-direction: column; max-width: 78%; position: relative; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation;}
     .msg-wrapper.sent { align-self: flex-end; align-items: flex-end; }
     .msg-wrapper.received { align-self: flex-start; align-items: flex-start; }
     
@@ -205,10 +234,8 @@
   
   <div class="boba-bg" id="boba-bg"></div> 
   
-  <!-- In-app Toasts -->
   <div id="notification-container"></div>
 
-  <!-- Custom Alert/Prompt Modal của Webapp -->
   <div id="app-modal" class="modal-overlay">
     <div class="modal-box">
       <h3 id="modal-title" class="modal-title">Thông báo</h3>
@@ -221,9 +248,19 @@
     </div>
   </div>
 
+  <div id="reaction-overlay" class="modal-overlay" onclick="closeReactionPicker(event)">
+    <div class="reaction-box" id="reaction-box">
+      <div class="reaction-item" onclick="submitReaction('❤️')">❤️</div>
+      <div class="reaction-item" onclick="submitReaction('😆')">😆</div>
+      <div class="reaction-item" onclick="submitReaction('😮')">😮</div>
+      <div class="reaction-item" onclick="submitReaction('😢')">😢</div>
+      <div class="reaction-item" onclick="submitReaction('😡')">😡</div>
+      <div class="reaction-item" onclick="submitReaction('👍')">👍</div>
+    </div>
+  </div>
+
   <div class="app-container">
     
-    <!-- Auth Screen -->
     <div id="auth-screen" class="screen active auth-panel">
       <div style="text-align: center; margin-bottom: 10px; font-size: 4.5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));">🧋</div>
       <h2 id="auth-title" class="auth-title">Xin chào!</h2>
@@ -249,7 +286,6 @@
       </p>
     </div>
 
-    <!-- Main Screen -->
     <div id="main-screen" class="screen">
       <div id="tab-chats" class="tab-pane active">
         <div class="header-bar"><span class="header-title">Đoạn chat 💬</span></div>
@@ -294,7 +330,6 @@
       </div>
     </div>
 
-    <!-- Chat Room -->
     <div id="chat-room" class="chat-room">
       <div class="chat-room-header">
         <button class="back-btn" onclick="closeChat()">❮</button>
@@ -371,7 +406,7 @@
       }, 4500);
     }
 
-    // --- HÀM TẠO MODAL TÙY CHỈNH TRONG APP (THAY THẾ ALERT & PROMPT) ---
+    // --- HÀM TẠO MODAL TÙY CHỈNH TRONG APP ---
     function showAppModal(title, message, isPrompt = false, defaultValue = '') {
       return new Promise((resolve) => {
         const modal = document.getElementById('app-modal');
@@ -407,7 +442,6 @@
         cancelBtn.onclick = () => { closeAndResolve(null); };
       });
     }
-
 
     // --- CẤU HÌNH SUPABASE ---
     const supabaseUrl = 'https://pkkbimyhlruwdlsrgcvy.supabase.co';
@@ -445,6 +479,7 @@
         : `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng ký ngay</a>`;
     }
 
+    // --- XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ MỚI BẮT LỖI ---
     async function handleAuth() {
       const email = document.getElementById('contact').value.trim();
       const pass = document.getElementById('password').value;
@@ -469,13 +504,24 @@
           return;
         }
         
+        // Tạo user trong hệ thống Auth
         const { data, error } = await mySupabaseClient.auth.signUp({ email, password: pass });
         if (error) {
           await showAppModal("Lỗi", error.message);
           return;
         }
         
-        await mySupabaseClient.from('profiles').insert([{ id: data.user.id, username, tag: customId, email }]);
+        // Bắt lỗi khi insert vào bảng profiles để chắc chắn dữ liệu được lưu
+        const { error: profileError } = await mySupabaseClient.from('profiles').insert([
+          { id: data.user.id, username, tag: customId, email }
+        ]);
+
+        if (profileError) {
+          console.error(profileError);
+          await showAppModal("Lỗi tạo hồ sơ", "Tạo tài khoản thành công nhưng không lưu được hồ sơ: " + profileError.message);
+          return;
+        }
+
         currentUser = data.user;
         await loadApp();
       }
@@ -666,21 +712,74 @@
       await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: imgUrl }]);
     }
 
-    // --- SỬ DỤNG MODAL TRONG APP ĐỂ THAY THẾ PROMPT TRÌNH DUYỆT ---
-    async function reactToMessage(msgId) {
-      const reaction = await showAppModal("Thả tim", "Nhập icon để thả tim nha:", true, "❤️");
-      if(reaction) {
-        await mySupabaseClient.from('messages').update({ reaction: reaction }).eq('id', msgId);
+    // --- LOGIC REACTION (NHẤN GIỮ MỞ BẢNG & NHẤN ĐÚP THẢ TIM) ---
+    let activeReactionMsgId = null;
+
+    function showReactionPicker(msgId) {
+      activeReactionMsgId = msgId;
+      document.getElementById('reaction-overlay').classList.add('active');
+      if (navigator.vibrate) navigator.vibrate(50);
+    }
+
+    function closeReactionPicker(e) {
+      if(e.target.id === 'reaction-overlay') {
+        document.getElementById('reaction-overlay').classList.remove('active');
+        activeReactionMsgId = null;
       }
     }
 
+    async function submitReaction(emoji) {
+      if (activeReactionMsgId) {
+        document.getElementById('reaction-overlay').classList.remove('active');
+        await quickReact(activeReactionMsgId, emoji);
+        activeReactionMsgId = null;
+      }
+    }
+
+    async function quickReact(msgId, emoji) {
+      await mySupabaseClient.from('messages').update({ reaction: emoji }).eq('id', msgId);
+    }
+
+    // --- RENDER TIN NHẮN TỐI ƯU CẢM ỨNG ---
     function renderMessage(msg) {
       const isMe = msg.sender_id === currentProfile.id;
       const wrap = document.createElement('div');
       wrap.className = `msg-wrapper ${isMe ? 'sent' : 'received'}`;
       wrap.id = `msg-${msg.id}`;
-      wrap.ondblclick = () => reactToMessage(msg.id); 
 
+      // Xử lý sự kiện nhấn giữ (Long Press) và nhấn đúp (Double Tap)
+      let pressTimer;
+      let lastTap = 0;
+
+      const startPress = (e) => {
+        pressTimer = setTimeout(() => {
+          showReactionPicker(msg.id);
+        }, 500); 
+      };
+
+      const cancelPress = () => clearTimeout(pressTimer);
+
+      // Cho thiết bị cảm ứng (Mobile/Tablet)
+      wrap.addEventListener('touchstart', startPress);
+      wrap.addEventListener('touchend', (e) => {
+        cancelPress();
+        let currentTime = new Date().getTime();
+        let tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+          quickReact(msg.id, '❤️');
+          e.preventDefault(); 
+        }
+        lastTap = currentTime;
+      });
+      wrap.addEventListener('touchmove', cancelPress);
+
+      // Cho máy tính (Chuột)
+      wrap.addEventListener('mousedown', startPress);
+      wrap.addEventListener('mouseup', cancelPress);
+      wrap.addEventListener('mouseleave', cancelPress);
+      wrap.ondblclick = () => quickReact(msg.id, '❤️');
+
+      // Tạo cấu trúc tin nhắn
       let contentHTML = '';
       if(msg.is_sticker) {
         contentHTML = `<div class="msg-bubble msg-sticker">${msg.content}</div>`;
