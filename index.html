@@ -719,19 +719,62 @@
     }
 
     async function handleAuth() {
-      const email = document.getElementById('contact').value.trim(); const pass = document.getElementById('password').value;
-      if (!email || !pass) { await showAppModal("Khoan đã!", "Nhập đủ thông tin nha!"); return; }
+      const email = document.getElementById('contact').value.trim(); 
+      const pass = document.getElementById('password').value;
+  
+      if (!email || !pass) { 
+        await showAppModal("Khoan đã!", "Nhập đủ thông tin nha!"); 
+        return; 
+      }
+  
       if (!isRegisterMode) {
+    // ---- XỬ LÝ ĐĂNG NHẬP ----
         const { data, error } = await mySupabaseClient.auth.signInWithPassword({ email: email, password: pass });
-        if (error) { await showAppModal("Lỗi rồi", "Sai mật khẩu hoặc email òi!"); return; }
-        currentUser = data.user; await loadApp();
+        if (error) { 
+          await showAppModal("Lỗi rồi", "Sai mật khẩu hoặc email òi!"); 
+          return; 
+        }
+        currentUser = data.user; 
+        await loadApp();
       } else {
-        const username = document.getElementById('username').value.trim(); const customId = getCustomId();
-        if (customId.length !== 4) { await showAppModal("Khoan đã!", "ID phải đủ 4 số nghen!"); return; }
+    // ---- XỬ LÝ ĐĂNG KÝ ----
+        const username = document.getElementById('username').value.trim(); 
+        const customId = getCustomId();
+    
+        if (customId.length !== 4) { 
+          await showAppModal("Khoan đã!", "ID phải đủ 4 số nghen!"); 
+          return; 
+        }
+    
+    // 1. Tạo tài khoản trên hệ thống Auth
         const { data, error } = await mySupabaseClient.auth.signUp({ email, password: pass });
-        if (error) { await showAppModal("Lỗi", error.message); return; }
-        await mySupabaseClient.from('profiles').insert([{ id: data.user.id, username, tag: customId, email, theme: 'light', font_size: '16px', language: 'vi' }]);
-        currentUser = data.user; await loadApp();
+        if (error) { 
+          await showAppModal("Lỗi", error.message); 
+          return; 
+        }
+    
+    // 2. Đẩy dữ liệu vào bảng profiles (Có bắt lỗi)
+          const { error: profileError } = await mySupabaseClient
+          .from('profiles')
+          .insert([{ 
+            id: data.user.id, 
+            username: username, 
+            tag: customId, 
+            email: email, 
+            theme: 'light', 
+            font_size: '16px', 
+            language: 'vi' 
+          }]);
+
+    // Nếu bảng profiles từ chối (thường do RLS), nó sẽ báo lỗi ở đây
+        if (profileError) {
+          console.error("LỖI SUPABASE:", profileError);
+          await showAppModal("Lỗi tạo Profile", "Tài khoản đã được tạo nhưng database chặn không cho lưu thông tin (Lỗi RLS). Xem F12 (Console) nhé!");
+          return;
+        }
+
+        currentUser = data.user; 
+        await loadApp();
       }
     }
 
