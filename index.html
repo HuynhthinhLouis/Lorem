@@ -262,6 +262,7 @@
       <h3 id="modal-title" class="modal-title">Thông báo</h3>
       <p id="modal-msg" class="modal-msg"></p>
       <div class="modal-buttons">
+        <button id="modal-cancel-btn" class="modal-btn btn-cancel" style="display:none;">Hủy</button>
         <button id="modal-ok-btn" class="modal-btn btn-ok" data-i18n="btn_ok">Đồng ý</button>
       </div>
     </div>
@@ -484,17 +485,8 @@
     let currentRank = null; 
     let appFunctionsList = [];
 
-    // HÀM KIỂM TRA QUYỀN HẠN DỰA VÀO RANK
-    function checkFeatureAccess(featureName) {
-      if(!appFunctionsList || appFunctionsList.length === 0) return true; // Fallback an toàn nếu chưa tạo bảng
-      const funcInfo = appFunctionsList.find(f => f.name === featureName);
-      if(!funcInfo) return true; // Nếu chưa thiết lập chức năng này, mặc định cho phép
-      
-      if(funcInfo.value === 0) return true; // Chức năng miễn phí
-      if(funcInfo.value === 1 && currentRank && currentRank.function === 1) return true; // Đủ quyền hạn
-      
-      return false; // Bị chặn
-    }
+    // BIẾN LƯU NHỮNG TÍNH NĂNG ĐÃ ĐƯỢC NGƯỜI DÙNG XÁC NHẬN "ĐỒNG Ý"
+    const acceptedExperimentalFeatures = [];
 
     async function updateSettings() {
       const theme = document.getElementById('setting-theme').value;
@@ -547,15 +539,28 @@
       }, 4500);
     }
 
-    function showAppModal(title, message) {
+    // HÀM SHOW MODAL ĐÃ ĐƯỢC CẬP NHẬT ĐỂ HỖ TRỢ NÚT HỦY
+    function showAppModal(title, message, showCancel = false) {
       return new Promise((resolve) => {
         const modal = document.getElementById('app-modal');
         document.getElementById('modal-title').textContent = title;
         document.getElementById('modal-msg').textContent = message;
+        
+        const cancelBtn = document.getElementById('modal-cancel-btn');
+        if(showCancel) {
+          cancelBtn.style.display = 'block';
+          cancelBtn.onclick = () => {
+            modal.classList.remove('active');
+            resolve(false); 
+          };
+        } else {
+          cancelBtn.style.display = 'none';
+        }
+
         modal.classList.add('active');
         document.getElementById('modal-ok-btn').onclick = () => {
           modal.classList.remove('active');
-          resolve(true);
+          resolve(true); 
         };
       });
     }
@@ -616,7 +621,7 @@
     }
 
     async function loadApp() {
-      // THÊM: Truy vấn an toàn kết hợp lấy thông tin RANK của người dùng hiện tại
+      // Truy vấn an toàn kết hợp lấy thông tin RANK của người dùng hiện tại
       let response = await mySupabaseClient.from('profiles').select('*, ranks(name, color, function)').eq('id', currentUser.id).single();
       
       // Fallback nếu người dùng chưa tạo các bảng SQL mới
@@ -627,7 +632,7 @@
       currentProfile = response.data;
       if(currentProfile.ranks) currentRank = currentProfile.ranks;
 
-      // THÊM: Lấy danh sách các chức năng (app_functions)
+      // Lấy danh sách các chức năng (app_functions)
       const funcRes = await mySupabaseClient.from('app_functions').select('*');
       if(!funcRes.error && funcRes.data) appFunctionsList = funcRes.data;
 
@@ -684,7 +689,6 @@
         const isSender = rel.sender_id === currentProfile.id;
         const friendId = isSender ? rel.receiver_id : rel.sender_id;
         
-        // Truy vấn an toàn kết hợp rank của bạn bè
         let resFriend = await mySupabaseClient.from('profiles').select('*, ranks(name, color)').eq('id', friendId).single();
         if(resFriend.error) resFriend = await mySupabaseClient.from('profiles').select('*').eq('id', friendId).single();
         
@@ -788,23 +792,56 @@
     
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
     
-    // TÍCH HỢP QUYỀN VÀO STICKER & CAMERA
-    function toggleStickers() { 
-      if (!checkFeatureAccess('Gửi Sticker')) {
-        const lang = localStorage.getItem('boba_lang');
-        showAppModal("Chức năng đặc quyền", lang === 'en' ? "Your Rank cannot send Stickers!" : "Hạng tài khoản của bạn chưa đủ để gửi Sticker!");
-        return;
+    // --- HÀM XỬ LÝ QUYỀN VÀ CẢNH BÁO THỬ NGHIỆM MỚI ---
+    async function handleFeatureExecution(featureName, callback) {
+      // Bỏ qua nếu chưa cấu hình trong DB
+      if(!appFunctionsList || appFunctionsList.length === 0) { callback(); return; }
+      const funcInfo = appFunctionsList.find(f => f.name === featureName);
+      if(!funcInfo) { callback(); return; }
+      
+      // Chức năng cơ bản (ai cũng dùng được)
+      if(funcInfo.value === 0) {
+        callback(); return;
       }
-      document.getElementById('sticker-panel').classList.toggle('active'); 
+      
+      // Chức năng cần quyền
+      if(funcInfo.value === 1) {
+        if(currentRank && currentRank.function === 1) {
+          
+          // Kiểm tra xem đã chấp nhận rủi ro thử nghiệm chưa
+          if (!acceptedExperimentalFeatures.includes(featureName)) {
+            const lang = localStorage.getItem('boba_lang');
+            const title = lang === 'en' ? "Experimental Feature" : "Chức năng thử nghiệm";
+            const msg = lang === 'en' ? "This feature is currently in testing and might be unstable. Proceed?" : `Tính năng [${featureName}] đang trong quá trình thử nghiệm. Bạn có muốn tiếp tục sử dụng không?`;
+            
+            // Hỏi ý kiến, nếu Hủy thì dừng
+            const isConfirm = await showAppModal(title, msg, true); 
+            if (!isConfirm) return; 
+            
+            // Ghi nhớ để lần sau không hỏi lại
+            acceptedExperimentalFeatures.push(featureName);
+          }
+          
+          callback();
+          
+        } else {
+          const lang = localStorage.getItem('boba_lang');
+          showAppModal("Chức năng bị khóa", lang === 'en' ? "Your Rank cannot use this feature!" : "Hạng tài khoản của bạn chưa đủ để dùng tính năng này!");
+        }
+      }
+    }
+
+    // Gắn hàm check mới vào Sticker và Ảnh
+    function toggleStickers() { 
+      handleFeatureExecution('Gửi Sticker', () => {
+        document.getElementById('sticker-panel').classList.toggle('active'); 
+      });
     }
 
     function triggerUpload() {
-      if (!checkFeatureAccess('Gửi hình ảnh')) {
-        const lang = localStorage.getItem('boba_lang');
-        showAppModal("Chức năng đặc quyền", lang === 'en' ? "Your Rank cannot upload Images!" : "Hạng tài khoản của bạn chưa đủ để gửi Hình ảnh!");
-        return;
-      }
-      document.getElementById('file-upload').click();
+      handleFeatureExecution('Gửi hình ảnh', () => {
+        document.getElementById('file-upload').click();
+      });
     }
 
     document.getElementById('chat-form').addEventListener('submit', async (e) => {
