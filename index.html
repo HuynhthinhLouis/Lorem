@@ -881,10 +881,21 @@
               }
             } else {
               saveMessageLocal(m, m.sender_id);
-              if (activeFriendId === m.sender_id) renderMessage(m);
-              else {
+              if (activeFriendId === m.sender_id) {
+                renderMessage(m);
+              } else {
+                // XỬ LÝ KHI NGƯỜI DÙNG KHÔNG MỞ KHUNG CHAT ĐÓ
                 const sender = friendsList.find(f => f.id === m.sender_id);
-                showAppNotification(`Tin nhắn từ ${sender ? sender.username : "Bạn bè"}`, m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content));
+                const title = `Tin nhắn từ ${sender ? sender.username : "Bạn bè"}`;
+                const body = m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content);
+                
+                // 1. Hiện thông báo pop-up trên Web
+                showAppNotification(title, body);
+
+                // 2. GỌI SANG APP ANDROID ĐỂ ĐẨY PUSH NOTIFICATION NATIVE
+                if (window.AndroidBridge && typeof window.AndroidBridge.showNativeNotification === 'function') {
+                    window.AndroidBridge.showNativeNotification(title, body);
+                }
               }
             }
             mySupabaseClient.from('messages').delete().eq('id', m.id);
