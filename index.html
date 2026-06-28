@@ -273,7 +273,6 @@
   
   <div id="notification-container"></div>
 
-  <!-- BẢNG THÔNG BÁO LỖI CHUNG -->
   <div id="app-modal" class="modal-overlay">
     <div class="modal-box">
       <h3 id="modal-title" class="modal-title">Thông báo</h3>
@@ -285,7 +284,6 @@
     </div>
   </div>
 
-  <!-- BẢNG ĐẶT BIỆT DANH IN-APP -->
   <div id="input-modal" class="modal-overlay">
     <div class="modal-box">
       <h3 id="input-modal-title" class="modal-title">Đặt biệt danh</h3>
@@ -565,6 +563,7 @@
     const acceptedExperimentalFeatures = [];
     let replyingMessageId = null;
 
+    // --- FIX LỖI Ở ĐÂY: Đã thêm dấu `};` đóng block dữ liệu sticker ---
     const stickerData = {
       "Mèo Ami": [
         "https://i.imgur.com/npjt5Fu.gif",
@@ -582,7 +581,8 @@
         "https://i.imgur.com/SEUf3Xv.gif",
         "https://i.imgur.com/2cB5cqV.gif",
         "https://i.imgur.com/46GKjpk.gif"
-      ],
+      ]
+    };
 
     function initStickerPanel() {
       const tabsContainer = document.getElementById('sticker-tabs');
