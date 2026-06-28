@@ -485,6 +485,9 @@
         toast.style.animation = 'slideDown 0.5s cubic-bezier(0.25, 1, 0.5, 1) reverse forwards';
         setTimeout(() => toast.remove(), 500);
       }, 3000);
+      if (window.AndroidBridge) {
+        window.AndroidBridge.showNativeNotification(title, msg);
+      }
     }
 
     /* FIX 2: Cập nhật Settings đồng bộ với Database */
