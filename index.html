@@ -414,19 +414,16 @@
           <span id="chat-room-name"></span>
           <span id="chat-room-rank" class="rank-badge" style="display:none; font-size:0.65rem;"></span>
         </div>
-        <!-- Nút đặt biệt danh -->
         <button class="nickname-btn" onclick="setFriendNickname()" title="Đặt biệt danh">✏️</button>
       </div>
       
       <div class="messages-area" id="messages-area"></div>
       
-      <!-- Preview giao diện reply tin nhắn -->
       <div class="reply-preview-container" id="reply-preview-container">
         <div class="reply-preview-content" id="reply-preview-content">Đang trả lời...</div>
         <div class="reply-preview-close" onclick="cancelReplyMode()">✕</div>
       </div>
 
-      <!-- Sticker Panel làm lại chuẩn phong cách Zalo/Messenger -->
       <div class="sticker-panel" id="sticker-panel">
         <div class="sticker-tabs" id="sticker-tabs"></div>
         <div class="sticker-grid-content" id="sticker-grid-content"></div>
@@ -448,6 +445,67 @@
   </div>
 
   <script>
+    // --- CÁC HÀM TIỆN ÍCH BỔ SUNG ĐỂ SỬA LỖI ---
+    
+    // 1. Tạo Avatar tự động (Dùng DiceBear)
+    function getAvatarUrl(seed) {
+      if (!seed) seed = "Boba";
+      return `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede`;
+    }
+
+    // 2. Chức năng chuyển tab
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.tab-pane').forEach(t => t.style.display = 'none');
+      document.getElementById(`tab-${tabId}`).style.display = 'flex';
+      
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    // 3. Hiển thị thông báo In-app (Toast)
+    function showAppNotification(title, msg) {
+      const container = document.getElementById('notification-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <div style="font-size: 1.5rem;">🧋</div>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-msg">${msg}</div>
+        </div>
+      `;
+      container.appendChild(toast);
+      
+      // Tự động ẩn sau 3 giây
+      setTimeout(() => {
+        toast.style.animation = 'slideDown 0.5s cubic-bezier(0.25, 1, 0.5, 1) reverse forwards';
+        setTimeout(() => toast.remove(), 500);
+      }, 3000);
+    }
+
+    // 4. Chức năng lưu cài đặt
+    function updateSettings() {
+      const theme = document.getElementById('setting-theme').value;
+      const fontSize = document.getElementById('setting-fontsize').value;
+      const lang = document.getElementById('setting-language').value;
+      
+      localStorage.setItem('boba_theme', theme);
+      localStorage.setItem('boba_fontsize', fontSize);
+      localStorage.setItem('boba_lang', lang);
+      
+      applySettings();
+      showAppNotification('Thành công', 'Đã lưu cài đặt của bạn!');
+    }
+
+    // 5. Chức năng đăng xuất
+    async function logout() {
+      await mySupabaseClient.auth.signOut();
+      currentUser = null;
+      currentProfile = null;
+      document.getElementById('main-screen').classList.remove('active');
+      document.getElementById('auth-screen').classList.add('active');
+    }
+
     // --- NGÔN NGỮ & CÀI ĐẶT ---
     const i18n = {
       vi: {
@@ -732,9 +790,18 @@
     }
 
     async function loadApp() {
+      // Sửa lỗi ở đây: Bắt lỗi nếu currentProfile rỗng
       let response = await mySupabaseClient.from('profiles').select('*, ranks(name, color, function)').eq('id', currentUser.id).single();
       if (response.error) response = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-      currentProfile = response.data; if(currentProfile.ranks) currentRank = currentProfile.ranks;
+      
+      currentProfile = response.data; 
+      
+      if (!currentProfile) {
+          await showAppModal("Lỗi dữ liệu", "Không thể tải thông tin hồ sơ của bạn. Hãy thử đăng nhập lại nhé!");
+          return;
+      }
+      
+      if(currentProfile.ranks) currentRank = currentProfile.ranks;
 
       const funcRes = await mySupabaseClient.from('app_functions').select('*');
       if(!funcRes.error && funcRes.data) appFunctionsList = funcRes.data;
@@ -750,6 +817,8 @@
       } else { rankBadge.style.display = 'none'; }
 
       document.getElementById('my-tag').textContent = `#${currentProfile.tag}`;
+      
+      // Lúc này hàm getAvatarUrl đã được cung cấp để load ảnh mượt mà
       document.getElementById('my-avatar').src = getAvatarUrl(currentProfile.username + currentProfile.tag);
       document.getElementById('auth-screen').classList.remove('active');
       document.getElementById('main-screen').classList.add('active');
