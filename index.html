@@ -545,19 +545,32 @@
     }
     createBobas();
 
-    function showAppNotification(title, message) {
+    function showAppNotification(title, msg) {
       const container = document.getElementById('notification-container');
       const toast = document.createElement('div');
       toast.className = 'toast';
-      toast.innerHTML = `<span style="font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🧋</span>
-        <div class="toast-content"><div class="toast-title">${title}</div><div class="toast-msg">${message}</div></div>`;
+      toast.innerHTML = `
+        <div style="font-size: 1.8rem;">🧋</div>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-msg">${msg}</div>
+        </div>
+      `;
       container.appendChild(toast);
       setTimeout(() => {
-        toast.style.opacity = '0'; toast.style.transform = 'translateY(-30px)';
-        toast.style.transition = 'all 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
-        setTimeout(() => toast.remove(), 400);
-      }, 4500);
+        toast.style.animation = 'slideDown 0.5s cubic-bezier(0.25, 1, 0.5, 1) reverse forwards';
+        setTimeout(() => toast.remove(), 500);
+      }, 3000);
     }
+
+    function showAlert(title, msg) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-msg').textContent = msg;
+      document.getElementById('app-modal').classList.add('active');
+    }
+    document.getElementById('modal-ok-btn').addEventListener('click', () => {
+      document.getElementById('app-modal').classList.remove('active');
+    });
 
     function showAppModal(title, message) {
       return new Promise((resolve) => {
