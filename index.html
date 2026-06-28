@@ -1063,6 +1063,22 @@
           }
         }).subscribe();
     }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Lấy phiên đăng nhập hiện tại từ LocalStorage (do Supabase quản lý)
+      const { data: { session }, error } = await mySupabaseClient.auth.getSession();
+      
+      if (session) {
+        // Nếu đã có phiên đăng nhập -> Vào thẳng màn hình chính
+        currentUser = session.user;
+        await loadApp();
+      } else {
+        // Nếu chưa có -> Hiển thị màn hình đăng nhập
+        document.getElementById('auth-screen').classList.add('active');
+        document.getElementById('main-screen').classList.remove('active');
+      }
+    });
+    
   </script>
 </body>
 </html>
