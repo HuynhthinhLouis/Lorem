@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* Bảng màu Glassmorphism */
+      /* Bảng màu Sáng (Mặc định) */
       --bg-glass: rgba(253, 248, 245, 0.65); 
       --bg-glass-heavy: rgba(255, 255, 255, 0.75);
       --glass-border: rgba(255, 255, 255, 0.8);
@@ -21,15 +21,38 @@
       --white: #FFFFFF;
       --bubble-sent: #D4A373;
       --bubble-recv: rgba(255, 255, 255, 0.85);
+      --bg-body-1: #eaddd3;
+      --bg-body-2: #f4e8df;
+    }
+
+    /* Bảng màu Tối (Dark Mode) */
+    body.dark-mode {
+      --bg-glass: rgba(30, 25, 22, 0.75); 
+      --bg-glass-heavy: rgba(45, 35, 30, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      
+      --primary: #e6b788;        
+      --primary-dark: #cca074;
+      --secondary: #4a382b;      
+      --text-main: #fcf6f0;      
+      --text-light: #d4bda8;
+      --white: #241c17;
+      --bubble-sent: #c28d5b;
+      --bubble-recv: rgba(60, 48, 40, 0.85);
+      --bg-body-1: #2a201a;
+      --bg-body-2: #1e1612;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Nunito', sans-serif; }
     
+    html { font-size: 16px; transition: font-size 0.3s ease; } /* Để thay đổi cỡ chữ */
+    
     body { 
-      background-color: #eaddd3; 
-      background: linear-gradient(135deg, #eaddd3 0%, #f4e8df 100%);
+      background-color: var(--bg-body-1); 
+      background: linear-gradient(135deg, var(--bg-body-1) 0%, var(--bg-body-2) 100%);
       display: flex; justify-content: center; align-items: center; 
       height: 100vh; color: var(--text-main); overflow: hidden;
+      transition: background 0.4s ease, color 0.4s ease;
     }
 
     /* Hiệu ứng Background */
@@ -53,7 +76,7 @@
       background: var(--bg-glass-heavy); 
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--glass-border); border-left: 5px solid var(--primary);
-      padding: 12px 20px; border-radius: 16px; box-shadow: 0 8px 32px rgba(94, 58, 37, 0.15); 
+      padding: 12px 20px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); 
       display: flex; align-items: center; gap: 12px;
       animation: slideDown 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; pointer-events: all;
     }
@@ -65,67 +88,58 @@
     /* Modal Overlay cho Alert/Prompt & Reactions */
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-      z-index: 100000; background: rgba(94, 58, 37, 0.2); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      z-index: 100000; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       display: flex; justify-content: center; align-items: center;
       opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
     }
     .modal-overlay.active { opacity: 1; pointer-events: all; }
+    
     .modal-box {
       background: var(--bg-glass-heavy); border: 1px solid var(--glass-border);
       padding: 25px; border-radius: 24px; width: 85%; max-width: 340px;
-      box-shadow: 0 10px 40px rgba(94, 58, 37, 0.2); text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); text-align: center;
       transform: translateY(20px) scale(0.95); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     .modal-overlay.active .modal-box { transform: translateY(0) scale(1); }
     .modal-title { font-size: 1.4rem; color: var(--primary); font-weight: 800; margin-bottom: 10px; }
     .modal-msg { color: var(--text-main); font-size: 1rem; font-weight: 600; margin-bottom: 20px; line-height: 1.4; }
-    .modal-input { 
-      width: 100%; padding: 14px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); 
-      background: rgba(255,255,255,0.6); outline: none; font-size: 1.2rem; text-align: center; 
-      margin-bottom: 20px; color: var(--text-main); font-weight: 800; display: none; transition: all 0.3s;
-    }
-    .modal-input:focus { border-color: var(--primary); background: var(--white); box-shadow: 0 4px 15px rgba(212, 163, 115, 0.15); }
+    
     .modal-buttons { display: flex; gap: 10px; justify-content: center; }
     .modal-btn { flex: 1; padding: 14px; border-radius: 16px; border: none; font-weight: 800; font-size: 1.05rem; cursor: pointer; transition: transform 0.2s; }
     .modal-btn:active { transform: scale(0.95); }
     .btn-ok { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
-    .btn-cancel { background: rgba(255, 244, 230, 0.9); color: var(--text-light); }
+    .btn-cancel { background: var(--white); color: var(--text-light); border: 1px solid var(--glass-border); }
 
-    /* --- BẢNG CHỌN REACTION IN-APP --- */
-    #reaction-overlay {
-      z-index: 100001; 
-    }
+    /* --- BẢNG CHỌN REACTION IN-APP CHUYÊN NGHIỆP --- */
+    #reaction-overlay { z-index: 100001; }
     .reaction-box {
       background: var(--bg-glass-heavy);
       border: 1px solid var(--glass-border);
       padding: 15px 25px;
-      border-radius: 30px;
+      border-radius: 40px;
       display: flex;
       gap: 15px;
-      box-shadow: 0 10px 40px rgba(94, 58, 37, 0.2);
-      transform: scale(0.8);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      transform: scale(0.8) translateY(20px);
       transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    .modal-overlay.active .reaction-box {
-      transform: scale(1);
-    }
+    .modal-overlay.active .reaction-box { transform: scale(1) translateY(0); }
     .reaction-item {
-      font-size: 2.2rem;
+      font-size: 2.4rem;
       cursor: pointer;
       transition: transform 0.2s;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    .reaction-item:active, .reaction-item:hover {
-      transform: scale(1.3) translateY(-5px);
-    }
+    .reaction-item:active, .reaction-item:hover { transform: scale(1.3) translateY(-5px); }
 
     /* App Container */
     .app-container { 
       width: 100%; max-width: 480px; background: var(--bg-glass); 
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border);
       height: 100vh; position: relative; overflow: hidden; display: flex; flex-direction: column; 
-      box-shadow: 0 10px 40px rgba(94, 58, 37, 0.15); z-index: 1;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); z-index: 1;
+      transition: background 0.4s ease;
     }
     @media (min-width: 481px) { .app-container { height: 92vh; border-radius: 28px; } }
 
@@ -133,13 +147,13 @@
     .auth-panel { padding: 40px 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
     .auth-title { text-align: center; font-size: 2.2rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .auth-subtitle { text-align: center; font-size: 1rem; color: var(--text-light); margin-top: -15px; margin-bottom: 20px; font-weight: 700;}
-    .input-cute { padding: 16px; border: 1px solid rgba(255,255,255,0.6); border-radius: 18px; font-size: 1rem; outline: none; background: rgba(255,255,255,0.7); color: var(--text-main); font-weight: 600; transition: all 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);}
+    .input-cute { padding: 16px; border: 1px solid var(--glass-border); border-radius: 18px; font-size: 1rem; outline: none; background: var(--bg-glass-heavy); color: var(--text-main); font-weight: 600; transition: all 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);}
     .input-cute:focus { border-color: var(--primary); background: var(--white); box-shadow: 0 4px 15px rgba(212, 163, 115, 0.2); transform: translateY(-1px); }
-    .btn-cute { padding: 16px; background: var(--primary); color: var(--white); border: none; border-radius: 18px; cursor: pointer; font-weight: 800; font-size: 1.1rem; transition: all 0.2s; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
+    .btn-cute { padding: 16px; background: var(--primary); color: #fff; border: none; border-radius: 18px; cursor: pointer; font-weight: 800; font-size: 1.1rem; transition: all 0.2s; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
     .btn-cute:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(212, 163, 115, 0.2); }
     .register-fields { display: none; flex-direction: column; gap: 15px; }
     .id-container { display: flex; justify-content: space-between; gap: 10px; }
-    .id-box { width: 100%; height: 55px; font-size: 1.5rem; text-align: center; border: 1px solid rgba(255,255,255,0.6); background: rgba(255,255,255,0.7); border-radius: 16px; outline: none; font-weight: 800; color: var(--text-main); transition: all 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); }
+    .id-box { width: 100%; height: 55px; font-size: 1.5rem; text-align: center; border: 1px solid var(--glass-border); background: var(--bg-glass-heavy); border-radius: 16px; outline: none; font-weight: 800; color: var(--text-main); transition: all 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); }
     .id-box:focus { background: var(--white); border-color: var(--primary); }
     
     /* App Layout */
@@ -155,25 +169,25 @@
     .tab-pane { display: none; flex-direction: column; }
     .tab-pane.active { display: flex; }
     
-    .bottom-nav { position: absolute; bottom: 0; width: 100%; height: 75px; background: var(--bg-glass-heavy); backdrop-filter: blur(12px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); border-radius: 24px 24px 0 0; box-shadow: 0 -4px 25px rgba(94, 58, 37, 0.08); z-index: 20;}
+    .bottom-nav { position: absolute; bottom: 0; width: 100%; height: 75px; background: var(--bg-glass-heavy); backdrop-filter: blur(12px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); border-radius: 24px 24px 0 0; box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.08); z-index: 20;}
     .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-light); font-weight: 700; font-size: 0.8rem; gap: 4px; cursor: pointer; flex: 1; padding: 10px 0; transition: all 0.3s;}
     .nav-item.active { color: var(--primary); transform: translateY(-3px) scale(1.05); }
     .nav-icon { font-size: 1.5rem; transition: transform 0.3s; }
     .nav-item.active .nav-icon { text-shadow: 0 4px 10px rgba(212, 163, 115, 0.4); }
 
     /* Lists */
-    .friend-item { display: flex; align-items: center; padding: 15px 20px; border: 1px solid rgba(255,255,255,0.5); cursor: pointer; background: rgba(255,255,255,0.6); margin: 10px 15px; border-radius: 20px; box-shadow: 0 4px 12px rgba(94, 58, 37, 0.03); transition: all 0.2s; backdrop-filter: blur(5px);}
-    .friend-item:active { transform: scale(0.97); background: rgba(255,255,255,0.4); }
+    .friend-item { display: flex; align-items: center; padding: 15px 20px; border: 1px solid var(--glass-border); cursor: pointer; background: var(--bg-glass-heavy); margin: 10px 15px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); transition: all 0.2s; backdrop-filter: blur(5px);}
+    .friend-item:active { transform: scale(0.97); }
     .avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--white); background: var(--secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.1);}
     .friend-info { margin-left: 15px; flex: 1; overflow: hidden; }
     .friend-name { font-weight: 800; font-size: 1.1rem; display: flex; align-items: baseline; justify-content: space-between;}
-    .friend-tag { font-size: 0.8rem; color: var(--primary); background: rgba(255, 244, 230, 0.8); padding: 2px 8px; border-radius: 8px; font-weight: bold;}
+    .friend-tag { font-size: 0.8rem; color: var(--primary); background: var(--bg-glass-heavy); padding: 2px 8px; border-radius: 8px; font-weight: bold;}
     .last-msg { font-size: 0.9rem; color: var(--text-light); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
     
     /* Requests */
     .request-btn-group { display: flex; gap: 8px; margin-top: 8px; }
-    .btn-accept { background: #8BC34A; color: white; border: none; padding: 8px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(139, 195, 74, 0.3);}
-    .btn-reject { background: #E57373; color: white; border: none; padding: 8px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(229, 115, 115, 0.3);}
+    .btn-accept { background: #8BC34A; color: white; border: none; padding: 8px 14px; border-radius: 10px; font-weight: bold; cursor: pointer;}
+    .btn-reject { background: #E57373; color: white; border: none; padding: 8px 14px; border-radius: 10px; font-weight: bold; cursor: pointer;}
 
     .empty-state { text-align: center; padding: 50px 20px; color: var(--text-light); font-weight: 700; font-size: 1.1rem; }
 
@@ -181,48 +195,52 @@
     .profile-header { display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background: var(--bg-glass-heavy); backdrop-filter: blur(10px); border-bottom: 1px solid var(--glass-border); margin-bottom: 15px; border-radius: 0 0 30px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.02);}
     .profile-avatar { width: 95px; height: 95px; border-radius: 50%; border: 4px solid var(--white); margin-bottom: 12px; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3);}
     .profile-name { font-size: 1.6rem; font-weight: 800; }
-    .add-friend-card { background: rgba(255,255,255,0.6); backdrop-filter: blur(8px); margin: 15px; padding: 20px; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 4px 15px rgba(0,0,0,0.03);}
+    .add-friend-card { background: var(--bg-glass-heavy); backdrop-filter: blur(8px); margin: 15px; padding: 20px; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 4px 15px rgba(0,0,0,0.03);}
     .add-friend-box { display: flex; gap: 10px; margin-top: 12px; }
-    .add-friend-box input { flex: 1; border-radius: 14px; border: 1px solid rgba(255,255,255,0.8); background: rgba(255,255,255,0.8); padding: 12px 15px; outline: none; font-weight: 600;}
-    .add-friend-box button { background: var(--primary); color: white; border: none; padding: 0 22px; border-radius: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(212, 163, 115, 0.3);}
+    .add-friend-box input { flex: 1; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--white); padding: 12px 15px; outline: none; font-weight: 600; color: var(--text-main);}
+    .add-friend-box button { background: var(--primary); color: white; border: none; padding: 0 22px; border-radius: 14px; font-weight: bold; cursor: pointer;}
+
+    /* Settings Tab */
+    .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-glass-heavy); border: 1px solid var(--glass-border); margin: 10px 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); font-weight: 700;}
+    .setting-item select { padding: 8px 12px; border-radius: 12px; border: 1px solid var(--primary); background: var(--white); color: var(--text-main); font-family: 'Nunito'; font-weight: 800; outline: none; cursor: pointer;}
 
     /* Chat Room */
     .chat-room { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-glass); backdrop-filter: blur(14px); z-index: 50; display: none; flex-direction: column; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .chat-room.active { display: flex; transform: translateX(0); }
     .chat-room-header { background: var(--bg-glass-heavy); backdrop-filter: blur(10px); padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid var(--glass-border); gap: 15px; padding-top: max(15px, env(safe-area-inset-top)); box-shadow: 0 2px 10px rgba(0,0,0,0.02);}
-    .back-btn { background: rgba(255, 244, 230, 0.8); border: 1px solid var(--white); font-size: 1.2rem; color: var(--primary); cursor: pointer; width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s;}
+    .back-btn { background: var(--white); border: 1px solid var(--glass-border); font-size: 1.2rem; color: var(--primary); cursor: pointer; width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s;}
     .back-btn:active { transform: scale(0.9); }
     
     .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; position: relative; scroll-behavior: smooth;}
     
-    /* Message Bubbles */
-    .msg-wrapper { display: flex; flex-direction: column; max-width: 78%; position: relative; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation;}
+    /* Message Bubbles - Ngăn bôi đen khi nhấn giữ */
+    .msg-wrapper { 
+      display: flex; flex-direction: column; max-width: 78%; position: relative; cursor: pointer; 
+      user-select: none; -webkit-user-select: none; touch-action: manipulation;
+    }
     .msg-wrapper.sent { align-self: flex-end; align-items: flex-end; }
     .msg-wrapper.received { align-self: flex-start; align-items: flex-start; }
     
     .msg-bubble { padding: 14px 18px; border-radius: 22px; font-size: 0.95rem; line-height: 1.45; font-weight: 600; word-wrap: break-word; position: relative; box-shadow: 0 3px 10px rgba(0,0,0,0.04); }
-    .msg-wrapper.sent .msg-bubble { background: var(--bubble-sent); color: var(--white); border-bottom-right-radius: 6px; }
+    .msg-wrapper.sent .msg-bubble { background: var(--bubble-sent); color: #fff; border-bottom-right-radius: 6px; }
     .msg-wrapper.received .msg-bubble { background: var(--bubble-recv); backdrop-filter: blur(5px); color: var(--text-main); border: 1px solid var(--glass-border); border-bottom-left-radius: 6px; }
     
-    /* Hình ảnh & Sticker */
     .msg-img { max-width: 220px; border-radius: 16px; margin-top: 5px; cursor: pointer; border: 2px solid var(--white); box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
     .msg-sticker { font-size: 4.5rem; line-height: 1; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1)); }
     
-    /* Reaction Badge */
-    .reaction-badge { position: absolute; bottom: -12px; right: -5px; background: rgba(255,255,255,0.95); border-radius: 20px; padding: 3px 6px; font-size: 0.85rem; box-shadow: 0 3px 8px rgba(0,0,0,0.12); border: 1px solid var(--glass-border); backdrop-filter: blur(4px); z-index: 2;}
+    .reaction-badge { position: absolute; bottom: -12px; right: -5px; background: var(--white); border-radius: 20px; padding: 3px 6px; font-size: 0.85rem; box-shadow: 0 3px 8px rgba(0,0,0,0.12); border: 1px solid var(--glass-border); z-index: 2;}
     .msg-wrapper.received .reaction-badge { right: auto; left: -5px; }
 
     /* Input Area */
     .chat-input-area { padding: 12px 15px; background: var(--bg-glass-heavy); backdrop-filter: blur(12px); border-top: 1px solid var(--glass-border); display: flex; align-items: center; gap: 10px; padding-bottom: max(12px, env(safe-area-inset-bottom)); position: relative; box-shadow: 0 -5px 20px rgba(0,0,0,0.02);}
-    .icon-btn { background: rgba(255, 244, 230, 0.8); color: var(--primary); border: 1px solid var(--white); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.2s;}
+    .icon-btn { background: var(--white); color: var(--primary); border: 1px solid var(--glass-border); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.2s;}
     .icon-btn:active { transform: scale(0.9); }
-    .chat-input-area input[type="text"] { flex: 1; padding: 14px 18px; border: 1px solid rgba(255,255,255,0.8); border-radius: 24px; outline: none; font-size: 0.95rem; background: rgba(255,255,255,0.6); color: var(--text-main); font-weight: 600; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); transition: background 0.3s;}
+    .chat-input-area input[type="text"] { flex: 1; padding: 14px 18px; border: 1px solid var(--glass-border); border-radius: 24px; outline: none; font-size: 0.95rem; background: var(--bg-glass-heavy); color: var(--text-main); font-weight: 600; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); transition: background 0.3s;}
     .chat-input-area input[type="text"]:focus { background: var(--white); }
     .chat-input-area button[type="submit"] { background: var(--primary); color: white; border: none; width: 46px; height: 46px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(212, 163, 115, 0.4); transition: transform 0.2s;}
     .chat-input-area button[type="submit"]:active { transform: scale(0.9); }
     
-    /* Sticker Panel */
-    .sticker-panel { display: none; position: absolute; bottom: 85px; left: 15px; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 15px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); gap: 12px; flex-wrap: wrap; width: 260px; z-index: 60;}
+    .sticker-panel { display: none; position: absolute; bottom: 85px; left: 15px; background: var(--bg-glass-heavy); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 15px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); gap: 12px; flex-wrap: wrap; width: 260px; z-index: 60;}
     .sticker-panel.active { display: flex; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .sticker-item { font-size: 2.2rem; cursor: pointer; transition: transform 0.2s; }
     .sticker-item:hover, .sticker-item:active { transform: scale(1.25); }
@@ -240,10 +258,8 @@
     <div class="modal-box">
       <h3 id="modal-title" class="modal-title">Thông báo</h3>
       <p id="modal-msg" class="modal-msg"></p>
-      <input type="text" id="modal-input" class="modal-input" autocomplete="off">
       <div class="modal-buttons">
-        <button id="modal-cancel-btn" class="modal-btn btn-cancel">Hủy</button>
-        <button id="modal-ok-btn" class="modal-btn btn-ok">Đồng ý</button>
+        <button id="modal-ok-btn" class="modal-btn btn-ok" data-i18n="btn_ok">Đồng ý</button>
       </div>
     </div>
   </div>
@@ -263,15 +279,15 @@
     
     <div id="auth-screen" class="screen active auth-panel">
       <div style="text-align: center; margin-bottom: 10px; font-size: 4.5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));">🧋</div>
-      <h2 id="auth-title" class="auth-title">Xin chào!</h2>
-      <p id="auth-subtitle" class="auth-subtitle">Đăng nhập vào Boba Chat</p>
+      <h2 id="auth-title" class="auth-title" data-i18n="auth_hello">Xin chào!</h2>
+      <p id="auth-subtitle" class="auth-subtitle" data-i18n="auth_desc">Đăng nhập vào Boba Chat</p>
       
-      <input type="email" id="contact" class="input-cute" placeholder="Email của bạn">
-      <input type="password" id="password" class="input-cute" placeholder="Mật khẩu">
+      <input type="email" id="contact" class="input-cute" placeholder="Email">
+      <input type="password" id="password" class="input-cute" placeholder="Password">
       
       <div id="register-fields" class="register-fields">
         <input type="text" id="username" class="input-cute" placeholder="Tên hiển thị (VD: Huy)">
-        <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: -10px; font-weight: bold; padding-left: 5px;">Nhập ID 4 số của bạn:</p>
+        <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: -10px; font-weight: bold; padding-left: 5px;" data-i18n="auth_enter_id">Nhập ID 4 số của bạn:</p>
         <div class="id-container">
           <input type="text" maxlength="1" class="id-box">
           <input type="text" maxlength="1" class="id-box">
@@ -280,52 +296,89 @@
         </div>
       </div>
 
-      <button id="auth-btn" class="btn-cute" onclick="handleAuth()">Đăng nhập</button>
+      <button id="auth-btn" class="btn-cute" onclick="handleAuth()" data-i18n="btn_login">Đăng nhập</button>
       <p id="toggle-auth-text" style="text-align: center; font-size: 0.95rem; margin-top: 10px; font-weight: 700;">
-        Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng ký ngay</a>
+        <span data-i18n="auth_no_acc">Chưa có tài khoản?</span> <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;" data-i18n="auth_reg_now">Đăng ký ngay</a>
       </p>
     </div>
 
     <div id="main-screen" class="screen">
+      
       <div id="tab-chats" class="tab-pane active">
-        <div class="header-bar"><span class="header-title">Đoạn chat 💬</span></div>
+        <div class="header-bar"><span class="header-title" data-i18n="nav_chats">Đoạn chat 💬</span></div>
         <div class="tab-content" id="chat-list-container"></div>
       </div>
 
       <div id="tab-account" class="tab-pane">
         <div class="header-bar">
-          <span class="header-title">Hồ sơ 👤</span>
-          <button onclick="logout()" style="background:rgba(217, 83, 79, 0.1); border:1px solid rgba(217, 83, 79, 0.2); color:#d9534f; padding: 6px 14px; border-radius: 12px; font-weight:800; cursor:pointer;">Đăng xuất</button>
+          <span class="header-title" data-i18n="nav_account">Hồ sơ 👤</span>
+          <button onclick="logout()" style="background:rgba(217, 83, 79, 0.1); border:1px solid rgba(217, 83, 79, 0.2); color:#d9534f; padding: 6px 14px; border-radius: 12px; font-weight:800; cursor:pointer;" data-i18n="btn_logout">Đăng xuất</button>
         </div>
         <div class="tab-content">
           <div class="profile-header">
             <img id="my-avatar" class="profile-avatar" src="" alt="Avatar">
-            <div class="profile-name" id="my-name">Tên hiển thị</div>
-            <div style="color: var(--primary); font-weight: 800; background: rgba(255,244,230,0.8); padding: 4px 14px; border-radius: 12px; margin-top: 8px; border: 1px solid var(--white);" id="my-tag">#0000</div>
+            <div class="profile-name" id="my-name">Name</div>
+            <div style="color: var(--primary); font-weight: 800; background: var(--bg-glass-heavy); padding: 4px 14px; border-radius: 12px; margin-top: 8px; border: 1px solid var(--glass-border);" id="my-tag">#0000</div>
           </div>
 
           <div class="add-friend-card">
-            <h3 style="color: var(--text-main); margin-bottom: 5px;">Thêm bạn bè mới</h3>
+            <h3 style="color: var(--text-main); margin-bottom: 5px;" data-i18n="acc_add_friend">Thêm bạn bè mới</h3>
             <div class="add-friend-box">
               <input type="text" id="friend-search" placeholder="Nhập Tên#1234">
-              <button onclick="sendFriendRequest()">Gửi</button>
+              <button onclick="sendFriendRequest()" data-i18n="btn_send">Gửi</button>
             </div>
           </div>
           
-          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; font-weight: 800; color: var(--text-main);">Lời mời kết bạn</h3>
+          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; font-weight: 800; color: var(--text-main);" data-i18n="acc_friend_req">Lời mời kết bạn</h3>
           <div id="friend-requests-list"></div>
 
-          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; font-weight: 800; color: var(--text-main);">Danh sách bạn bè</h3>
+          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; font-weight: 800; color: var(--text-main);" data-i18n="acc_friend_list">Danh sách bạn bè</h3>
           <div id="account-friend-list"></div>
+        </div>
+      </div>
+
+      <div id="tab-settings" class="tab-pane">
+        <div class="header-bar"><span class="header-title" data-i18n="nav_settings">Cài đặt ⚙️</span></div>
+        <div class="tab-content">
+          
+          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; color: var(--text-main);" data-i18n="set_appearance">Giao diện</h3>
+          <div class="setting-item">
+            <span data-i18n="set_theme">Giao diện</span>
+            <select id="setting-theme" onchange="updateSettings()">
+              <option value="light" data-i18n="opt_light">Sáng</option>
+              <option value="dark" data-i18n="opt_dark">Tối</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <span data-i18n="set_fontsize">Cỡ chữ</span>
+            <select id="setting-fontsize" onchange="updateSettings()">
+              <option value="14px" data-i18n="opt_small">Nhỏ</option>
+              <option value="16px" data-i18n="opt_medium">Vừa</option>
+              <option value="18px" data-i18n="opt_large">Lớn</option>
+            </select>
+          </div>
+
+          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; color: var(--text-main);" data-i18n="set_system">Hệ thống</h3>
+          <div class="setting-item">
+            <span data-i18n="set_language">Ngôn ngữ</span>
+            <select id="setting-language" onchange="updateSettings()">
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
         </div>
       </div>
 
       <div class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('chats', this)">
-          <span class="nav-icon">💬</span><span>Tin nhắn</span>
+          <span class="nav-icon">💬</span><span data-i18n="nav_chats_bot">Tin nhắn</span>
         </div>
         <div class="nav-item" onclick="switchTab('account', this)">
-          <span class="nav-icon">👤</span><span>Tài khoản</span>
+          <span class="nav-icon">👤</span><span data-i18n="nav_account">Tài khoản</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('settings', this)">
+          <span class="nav-icon">⚙️</span><span data-i18n="nav_settings_bot">Cài đặt</span>
         </div>
       </div>
     </div>
@@ -357,7 +410,7 @@
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
         
         <form id="chat-form" style="display: flex; flex: 1; gap: 8px;">
-          <input type="text" id="message-input" placeholder="Gửi tin nhắn..." autocomplete="off">
+          <input type="text" id="message-input" placeholder="Aa..." autocomplete="off">
           <button type="submit">➤</button>
         </form>
       </div>
@@ -366,6 +419,60 @@
   </div>
 
   <script>
+    // --- NGÔN NGỮ & CÀI ĐẶT (SETTINGS LOGIC) ---
+    const i18n = {
+      vi: {
+        nav_chats: "Đoạn chat 💬", nav_chats_bot: "Tin nhắn", nav_account: "Hồ sơ 👤", nav_settings: "Cài đặt ⚙️", nav_settings_bot: "Cài đặt",
+        auth_hello: "Xin chào!", auth_desc: "Đăng nhập vào Boba Chat", auth_enter_id: "Nhập ID 4 số của bạn:", btn_login: "Đăng nhập", auth_no_acc: "Chưa có tài khoản?", auth_reg_now: "Đăng ký ngay",
+        btn_logout: "Đăng xuất", acc_add_friend: "Thêm bạn bè mới", btn_send: "Gửi", acc_friend_req: "Lời mời kết bạn", acc_friend_list: "Danh sách bạn bè", btn_ok: "Đồng ý",
+        set_appearance: "Giao diện", set_theme: "Màu sắc", set_fontsize: "Cỡ chữ", set_system: "Hệ thống", set_language: "Ngôn ngữ",
+        opt_light: "Sáng", opt_dark: "Tối", opt_small: "Nhỏ", opt_medium: "Vừa", opt_large: "Lớn"
+      },
+      en: {
+        nav_chats: "Chats 💬", nav_chats_bot: "Chats", nav_account: "Profile 👤", nav_settings: "Settings ⚙️", nav_settings_bot: "Settings",
+        auth_hello: "Welcome!", auth_desc: "Log in to Boba Chat", auth_enter_id: "Enter your 4-digit ID:", btn_login: "Login", auth_no_acc: "No account?", auth_reg_now: "Register",
+        btn_logout: "Logout", acc_add_friend: "Add new friend", btn_send: "Send", acc_friend_req: "Friend Requests", acc_friend_list: "Friend List", btn_ok: "OK",
+        set_appearance: "Appearance", set_theme: "Theme", set_fontsize: "Font Size", set_system: "System", set_language: "Language",
+        opt_light: "Light", opt_dark: "Dark", opt_small: "Small", opt_medium: "Medium", opt_large: "Large"
+      }
+    };
+
+    function applySettings() {
+      const theme = localStorage.getItem('boba_theme') || 'light';
+      const fontSize = localStorage.getItem('boba_fontsize') || '16px';
+      const lang = localStorage.getItem('boba_lang') || 'vi';
+
+      // Áp dụng Giao diện tối/sáng
+      if(theme === 'dark') document.body.classList.add('dark-mode');
+      else document.body.classList.remove('dark-mode');
+
+      // Áp dụng Cỡ chữ
+      document.documentElement.style.fontSize = fontSize;
+
+      // Đồng bộ các thanh chọn trong Tab Cài đặt
+      const elTheme = document.getElementById('setting-theme');
+      const elFont = document.getElementById('setting-fontsize');
+      const elLang = document.getElementById('setting-language');
+      if(elTheme) elTheme.value = theme;
+      if(elFont) elFont.value = fontSize;
+      if(elLang) elLang.value = lang;
+
+      // Áp dụng ngôn ngữ
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if(i18n[lang] && i18n[lang][key]) el.innerHTML = i18n[lang][key];
+      });
+    }
+
+    function updateSettings() {
+      localStorage.setItem('boba_theme', document.getElementById('setting-theme').value);
+      localStorage.setItem('boba_fontsize', document.getElementById('setting-fontsize').value);
+      localStorage.setItem('boba_lang', document.getElementById('setting-language').value);
+      applySettings();
+    }
+    
+    applySettings(); // Chạy ngay khi mở app
+
     // --- NỀN BOBA ---
     function createBobas() {
       const bg = document.getElementById('boba-bg');
@@ -385,61 +492,30 @@
     }
     createBobas();
 
-    // --- HÀM THÔNG BÁO NHANH (TOAST) ---
     function showAppNotification(title, message) {
       const container = document.getElementById('notification-container');
       const toast = document.createElement('div');
       toast.className = 'toast';
-      toast.innerHTML = `
-        <span style="font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🧋</span>
-        <div class="toast-content">
-          <div class="toast-title">${title}</div>
-          <div class="toast-msg">${message}</div>
-        </div>
-      `;
+      toast.innerHTML = `<span style="font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🧋</span>
+        <div class="toast-content"><div class="toast-title">${title}</div><div class="toast-msg">${message}</div></div>`;
       container.appendChild(toast);
       setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-30px)';
+        toast.style.opacity = '0'; toast.style.transform = 'translateY(-30px)';
         toast.style.transition = 'all 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
         setTimeout(() => toast.remove(), 400);
       }, 4500);
     }
 
-    // --- HÀM TẠO MODAL TÙY CHỈNH TRONG APP ---
-    function showAppModal(title, message, isPrompt = false, defaultValue = '') {
+    function showAppModal(title, message) {
       return new Promise((resolve) => {
         const modal = document.getElementById('app-modal');
-        const titleEl = document.getElementById('modal-title');
-        const msgEl = document.getElementById('modal-msg');
-        const inputEl = document.getElementById('modal-input');
-        const cancelBtn = document.getElementById('modal-cancel-btn');
-        const okBtn = document.getElementById('modal-ok-btn');
-
-        titleEl.textContent = title;
-        msgEl.textContent = message;
-
-        if (isPrompt) {
-          inputEl.style.display = 'block';
-          inputEl.value = defaultValue;
-          cancelBtn.style.display = 'block';
-        } else {
-          inputEl.style.display = 'none';
-          cancelBtn.style.display = 'none';
-        }
-
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-msg').textContent = message;
         modal.classList.add('active');
-        if (isPrompt) inputEl.focus();
-
-        const closeAndResolve = (result) => {
+        document.getElementById('modal-ok-btn').onclick = () => {
           modal.classList.remove('active');
-          okBtn.onclick = null;
-          cancelBtn.onclick = null;
-          resolve(result);
+          resolve(true);
         };
-
-        okBtn.onclick = () => { closeAndResolve(isPrompt ? inputEl.value : true); };
-        cancelBtn.onclick = () => { closeAndResolve(null); };
       });
     }
 
@@ -448,11 +524,8 @@
     const supabaseSecretKey = 'sb_publishable_gYFKPW27BdH7LcsGq4flCQ_5bHG2dF3'; 
     const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
 
-    let currentUser = null;
-    let currentProfile = null;
-    let activeFriendId = null; 
-    let isRegisterMode = false; 
-    let friendsList = [];
+    let currentUser = null; let currentProfile = null; let activeFriendId = null; 
+    let isRegisterMode = false; let friendsList = [];
 
     function getAvatarUrl(seed) { return `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=FAEDCD`; }
 
@@ -470,60 +543,37 @@
 
     function toggleAuthMode(isRegister) {
       isRegisterMode = isRegister;
-      document.getElementById('auth-title').textContent = isRegister ? 'Tạo tài khoản' : 'Xin chào!';
-      document.getElementById('auth-subtitle').textContent = isRegister ? 'Trở thành thành viên' : 'Đăng nhập vào Boba Chat';
+      const lang = localStorage.getItem('boba_lang') || 'vi';
+      document.getElementById('auth-title').textContent = isRegister ? (lang==='en'?"Register":"Tạo tài khoản") : (lang==='en'?"Welcome!":"Xin chào!");
+      document.getElementById('auth-subtitle').textContent = isRegister ? (lang==='en'?"Become a member":"Trở thành thành viên") : (lang==='en'?"Log in to Boba Chat":"Đăng nhập vào Boba Chat");
       document.getElementById('register-fields').style.display = isRegister ? 'flex' : 'none';
-      document.getElementById('auth-btn').textContent = isRegister ? 'Tạo tài khoản' : 'Đăng nhập';
+      document.getElementById('auth-btn').textContent = isRegister ? (lang==='en'?"Register":"Tạo tài khoản") : (lang==='en'?"Login":"Đăng nhập");
       document.getElementById('toggle-auth-text').innerHTML = isRegister 
-        ? `Đã có tài khoản? <a href="#" onclick="toggleAuthMode(false); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng nhập</a>` 
-        : `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng ký ngay</a>`;
+        ? `<span data-i18n="auth_has_acc">${lang==='en'?"Already have an account?":"Đã có tài khoản?"}</span> <a href="#" onclick="toggleAuthMode(false); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">${lang==='en'?"Login":"Đăng nhập"}</a>` 
+        : `<span data-i18n="auth_no_acc">${lang==='en'?"No account?":"Chưa có tài khoản?"}</span> <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">${lang==='en'?"Register":"Đăng ký ngay"}</a>`;
     }
 
-    // --- XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ MỚI BẮT LỖI ---
     async function handleAuth() {
       const email = document.getElementById('contact').value.trim();
       const pass = document.getElementById('password').value;
-      if (!email || !pass) {
-        await showAppModal("Khoan đã!", "Nhập đủ thông tin nha!");
-        return;
-      }
+      if (!email || !pass) { await showAppModal("Khoan đã!", "Nhập đủ thông tin nha!"); return; }
 
       if (!isRegisterMode) {
         const { data, error } = await mySupabaseClient.auth.signInWithPassword({ email: email, password: pass });
-        if (error) {
-          await showAppModal("Lỗi rồi", "Sai mật khẩu hoặc email òi!");
-          return;
-        }
-        currentUser = data.user;
-        await loadApp();
+        if (error) { await showAppModal("Lỗi rồi", "Sai mật khẩu hoặc email òi!"); return; }
+        currentUser = data.user; await loadApp();
       } else {
         const username = document.getElementById('username').value.trim();
         const customId = getCustomId();
-        if (customId.length !== 4) {
-          await showAppModal("Khoan đã!", "ID phải đủ 4 số nghen!");
-          return;
-        }
+        if (customId.length !== 4) { await showAppModal("Khoan đã!", "ID phải đủ 4 số nghen!"); return; }
         
-        // Tạo user trong hệ thống Auth
         const { data, error } = await mySupabaseClient.auth.signUp({ email, password: pass });
-        if (error) {
-          await showAppModal("Lỗi", error.message);
-          return;
-        }
+        if (error) { await showAppModal("Lỗi", error.message); return; }
         
-        // Bắt lỗi khi insert vào bảng profiles để chắc chắn dữ liệu được lưu
-        const { error: profileError } = await mySupabaseClient.from('profiles').insert([
-          { id: data.user.id, username, tag: customId, email }
-        ]);
+        const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ id: data.user.id, username, tag: customId, email }]);
+        if (profileError) { await showAppModal("Lỗi tạo hồ sơ", "Lỗi: " + profileError.message); return; }
 
-        if (profileError) {
-          console.error(profileError);
-          await showAppModal("Lỗi tạo hồ sơ", "Tạo tài khoản thành công nhưng không lưu được hồ sơ: " + profileError.message);
-          return;
-        }
-
-        currentUser = data.user;
-        await loadApp();
+        currentUser = data.user; await loadApp();
       }
     }
 
@@ -549,18 +599,14 @@
     function logout() { mySupabaseClient.auth.signOut(); window.location.reload(); }
 
     async function loadFriendsData() {
-      const { data: relations } = await mySupabaseClient.from('friends')
-        .select('id, sender_id, receiver_id, status')
-        .or(`sender_id.eq.${currentProfile.id},receiver_id.eq.${currentProfile.id}`);
-      
-      const reqList = document.getElementById('friend-requests-list');
-      const accList = document.getElementById('account-friend-list');
-      const chatList = document.getElementById('chat-list-container');
-      reqList.innerHTML = accList.innerHTML = chatList.innerHTML = '';
-      friendsList = [];
+      const { data: relations } = await mySupabaseClient.from('friends').select('id, sender_id, receiver_id, status').or(`sender_id.eq.${currentProfile.id},receiver_id.eq.${currentProfile.id}`);
+      const reqList = document.getElementById('friend-requests-list'); const accList = document.getElementById('account-friend-list'); const chatList = document.getElementById('chat-list-container');
+      reqList.innerHTML = accList.innerHTML = chatList.innerHTML = ''; friendsList = [];
+      const lang = localStorage.getItem('boba_lang');
 
       if (!relations || relations.length === 0) {
-        chatList.innerHTML = accList.innerHTML = reqList.innerHTML = '<div class="empty-state">Trống trơn à...</div>';
+        let emptyTxt = lang === 'en' ? 'Empty...' : 'Trống trơn à...';
+        chatList.innerHTML = accList.innerHTML = reqList.innerHTML = `<div class="empty-state">${emptyTxt}</div>`;
         return;
       }
 
@@ -572,80 +618,48 @@
 
         const avatar = getAvatarUrl(fProfile.username + fProfile.tag);
 
-        if (rel.status === 'pending') {
-          if (!isSender) { 
-            reqList.innerHTML += `
-              <div class="friend-item">
-                <img class="avatar" src="${avatar}">
-                <div class="friend-info">
-                  <div class="friend-name">${fProfile.username} <span class="friend-tag">#${fProfile.tag}</span></div>
-                  <div class="request-btn-group">
-                    <button class="btn-accept" onclick="respondRequest('${rel.id}', 'accepted')">Đồng ý</button>
-                    <button class="btn-reject" onclick="respondRequest('${rel.id}', 'rejected')">Từ chối</button>
-                  </div>
-                </div>
-              </div>`;
-          }
-        } else if (rel.status === 'accepted') {
-          friendsList.push(fProfile);
-          accList.innerHTML += `
+        if (rel.status === 'pending' && !isSender) {
+          reqList.innerHTML += `
             <div class="friend-item">
               <img class="avatar" src="${avatar}">
               <div class="friend-info">
                 <div class="friend-name">${fProfile.username} <span class="friend-tag">#${fProfile.tag}</span></div>
+                <div class="request-btn-group">
+                  <button class="btn-accept" onclick="respondRequest('${rel.id}', 'accepted')">✔</button>
+                  <button class="btn-reject" onclick="respondRequest('${rel.id}', 'rejected')">✖</button>
+                </div>
               </div>
             </div>`;
+        } else if (rel.status === 'accepted') {
+          friendsList.push(fProfile);
+          accList.innerHTML += `<div class="friend-item"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name">${fProfile.username} <span class="friend-tag">#${fProfile.tag}</span></div></div></div>`;
             
-          const { data: lastMsg } = await mySupabaseClient.from('messages')
-            .select('content, is_sticker, image_url')
-            .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fProfile.id}),and(sender_id.eq.${fProfile.id},receiver_id.eq.${currentProfile.id})`)
-            .order('created_at', { ascending: false }).limit(1);
-            
-          let text = 'Bấm để chat nè...';
+          const { data: lastMsg } = await mySupabaseClient.from('messages').select('content, is_sticker, image_url').or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fProfile.id}),and(sender_id.eq.${fProfile.id},receiver_id.eq.${currentProfile.id})`).order('created_at', { ascending: false }).limit(1);
+          let text = lang === 'en' ? 'Tap to chat...' : 'Bấm để chat nè...';
           if(lastMsg && lastMsg.length > 0) {
             if(lastMsg[0].is_sticker) text = '[Sticker]';
-            else if(lastMsg[0].image_url) text = '[Hình ảnh]';
+            else if(lastMsg[0].image_url) text = lang === 'en' ? '[Image]' : '[Hình ảnh]';
             else text = lastMsg[0].content;
           }
 
-          chatList.innerHTML += `
-            <div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}')">
-              <img class="avatar" src="${avatar}">
-              <div class="friend-info">
-                <div class="friend-name">${fProfile.username}</div>
-                <div class="last-msg" id="last-msg-${fProfile.id}">${text}</div>
-              </div>
-            </div>`;
+          chatList.innerHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}')"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name">${fProfile.username}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
         }
       }
       
-      if(reqList.innerHTML === '') reqList.innerHTML = '<div class="empty-state">Không có lời mời nào</div>';
-      if(accList.innerHTML === '') accList.innerHTML = '<div class="empty-state">Chưa có bạn bè</div>';
+      if(reqList.innerHTML === '') reqList.innerHTML = `<div class="empty-state">${lang === 'en' ? 'No requests' : 'Không có lời mời nào'}</div>`;
+      if(accList.innerHTML === '') accList.innerHTML = `<div class="empty-state">${lang === 'en' ? 'No friends yet' : 'Chưa có bạn bè'}</div>`;
     }
 
     async function sendFriendRequest() {
       const q = document.getElementById('friend-search').value.trim();
-      if(!q.includes('#')) {
-        await showAppModal("Sai định dạng", "Ghi đúng định dạng Tên#ID nha bạn yêu ơi!");
-        return;
-      }
-      
+      if(!q.includes('#')) { await showAppModal("Sai định dạng", "Ghi đúng định dạng Tên#ID nha!"); return; }
       const [u, t] = q.split('#');
       const { data: f } = await mySupabaseClient.from('profiles').select('id').eq('username', u).eq('tag', t).single();
-      
-      if(!f) {
-        await showAppModal("Buồn ghê", "Hổng tìm thấy bạn này :(");
-        return;
-      }
-      
-      if(f.id === currentProfile.id) {
-        await showAppModal("Ủa alo", "Đừng tự gửi lời mời kết bạn cho chính mình chứ!");
-        return;
-      }
+      if(!f) { await showAppModal("Buồn ghê", "Hổng tìm thấy bạn này :("); return; }
+      if(f.id === currentProfile.id) { await showAppModal("Alo", "Đừng tự kết bạn với chính mình!"); return; }
 
       await mySupabaseClient.from('friends').insert([{ sender_id: currentProfile.id, receiver_id: f.id, status: 'pending' }]);
-      showAppNotification('Thành công', 'Đã gửi lời mời kết bạn thành công!'); 
-      document.getElementById('friend-search').value = '';
+      showAppNotification('Thành công', 'Đã gửi lời mời!'); document.getElementById('friend-search').value = '';
     }
 
     async function respondRequest(relId, status) {
@@ -660,59 +674,37 @@
       document.getElementById('chat-room-avatar').src = getAvatarUrl(name+tag);
       document.getElementById('chat-room').classList.add('active');
       document.getElementById('sticker-panel').classList.remove('active');
+      const area = document.getElementById('messages-area'); area.innerHTML = '';
       
-      const area = document.getElementById('messages-area');
-      area.innerHTML = '';
-      
-      const { data: msgs } = await mySupabaseClient.from('messages').select('*')
-        .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fid}),and(sender_id.eq.${fid},receiver_id.eq.${currentProfile.id})`)
-        .order('created_at', { ascending: true });
-        
+      const { data: msgs } = await mySupabaseClient.from('messages').select('*').or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fid}),and(sender_id.eq.${fid},receiver_id.eq.${currentProfile.id})`).order('created_at', { ascending: true });
       if(msgs) msgs.forEach(m => renderMessage(m));
       setTimeout(() => area.scrollTo(0, area.scrollHeight), 150);
     }
     
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
-
     function toggleStickers() { document.getElementById('sticker-panel').classList.toggle('active'); }
 
     document.getElementById('chat-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = document.getElementById('message-input');
-      const text = input.value.trim();
-      if(text && activeFriendId) {
-        input.value = '';
-        await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: text }]);
-      }
+      e.preventDefault(); const input = document.getElementById('message-input'); const text = input.value.trim();
+      if(text && activeFriendId) { input.value = ''; await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: text }]); }
     });
 
     async function sendSticker(emoji) {
       toggleStickers();
-      if(activeFriendId) {
-        await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: emoji, is_sticker: true }]);
-      }
+      if(activeFriendId) await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: emoji, is_sticker: true }]);
     }
 
     async function uploadImage(e) {
-      const file = e.target.files[0];
-      if(!file || !activeFriendId) return;
-      
-      showAppNotification('Đang gửi...', 'Hình ảnh của bạn đang được tải lên');
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      
-      const { data, error } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
-      if(error) {
-        await showAppModal("Lỗi tải ảnh", error.message);
-        return;
-      }
-      
+      const file = e.target.files[0]; if(!file || !activeFriendId) return;
+      showAppNotification('Đang gửi...', 'Hình ảnh đang tải lên');
+      const fileName = `${Date.now()}.${file.name.split('.').pop()}`;
+      const { error } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
+      if(error) { await showAppModal("Lỗi tải ảnh", error.message); return; }
       const imgUrl = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
       await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: imgUrl }]);
     }
 
-    // --- LOGIC REACTION (NHẤN GIỮ MỞ BẢNG & NHẤN ĐÚP THẢ TIM) ---
+    // --- REACTION LOGIC (LONG PRESS & DOUBLE TAP) ---
     let activeReactionMsgId = null;
 
     function showReactionPicker(msgId) {
@@ -722,122 +714,82 @@
     }
 
     function closeReactionPicker(e) {
-      if(e.target.id === 'reaction-overlay') {
-        document.getElementById('reaction-overlay').classList.remove('active');
-        activeReactionMsgId = null;
-      }
+      if(e.target.id === 'reaction-overlay') { document.getElementById('reaction-overlay').classList.remove('active'); activeReactionMsgId = null; }
     }
 
     async function submitReaction(emoji) {
       if (activeReactionMsgId) {
         document.getElementById('reaction-overlay').classList.remove('active');
-        await quickReact(activeReactionMsgId, emoji);
+        await mySupabaseClient.from('messages').update({ reaction: emoji }).eq('id', activeReactionMsgId);
         activeReactionMsgId = null;
       }
     }
 
-    async function quickReact(msgId, emoji) {
-      await mySupabaseClient.from('messages').update({ reaction: emoji }).eq('id', msgId);
-    }
-
-    // --- RENDER TIN NHẮN TỐI ƯU CẢM ỨNG ---
     function renderMessage(msg) {
       const isMe = msg.sender_id === currentProfile.id;
       const wrap = document.createElement('div');
       wrap.className = `msg-wrapper ${isMe ? 'sent' : 'received'}`;
       wrap.id = `msg-${msg.id}`;
 
-      // Xử lý sự kiện nhấn giữ (Long Press) và nhấn đúp (Double Tap)
-      let pressTimer;
-      let lastTap = 0;
+      // Logic Nhấn giữ (Long press) & Nhấn Đúp (Double Tap)
+      let pressTimer; let isDragging = false; let lastTap = 0;
 
-      const startPress = (e) => {
-        pressTimer = setTimeout(() => {
-          showReactionPicker(msg.id);
-        }, 500); 
+      const startPress = () => {
+        isDragging = false;
+        pressTimer = setTimeout(() => showReactionPicker(msg.id), 500); 
       };
 
-      const cancelPress = () => clearTimeout(pressTimer);
-
-      // Cho thiết bị cảm ứng (Mobile/Tablet)
-      wrap.addEventListener('touchstart', startPress);
+      wrap.addEventListener('touchstart', startPress, {passive: true});
+      wrap.addEventListener('touchmove', () => { isDragging = true; clearTimeout(pressTimer); }, {passive: true});
       wrap.addEventListener('touchend', (e) => {
-        cancelPress();
+        clearTimeout(pressTimer);
+        if (isDragging) return;
         let currentTime = new Date().getTime();
         let tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0) {
-          quickReact(msg.id, '❤️');
+        if (tapLength < 300 && tapLength > 0) { // DOUBLE TAP = THẢ TIM NHANH
+          mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msg.id);
           e.preventDefault(); 
         }
         lastTap = currentTime;
       });
-      wrap.addEventListener('touchmove', cancelPress);
-
-      // Cho máy tính (Chuột)
+      // Chuột trên PC
       wrap.addEventListener('mousedown', startPress);
-      wrap.addEventListener('mouseup', cancelPress);
-      wrap.addEventListener('mouseleave', cancelPress);
-      wrap.ondblclick = () => quickReact(msg.id, '❤️');
+      wrap.addEventListener('mouseup', () => clearTimeout(pressTimer));
+      wrap.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+      wrap.ondblclick = () => mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msg.id);
 
-      // Tạo cấu trúc tin nhắn
-      let contentHTML = '';
-      if(msg.is_sticker) {
-        contentHTML = `<div class="msg-bubble msg-sticker">${msg.content}</div>`;
-      } else if (msg.image_url) {
-        contentHTML = `<img class="msg-img" src="${msg.image_url}" alt="image" onclick="window.open('${msg.image_url}')">`;
-      } else {
-        contentHTML = `<div class="msg-bubble">${msg.content}</div>`;
-      }
+      let contentHTML = msg.is_sticker ? `<div class="msg-bubble msg-sticker">${msg.content}</div>` : 
+                        (msg.image_url ? `<img class="msg-img" src="${msg.image_url}" onclick="window.open('${msg.image_url}')">` : 
+                        `<div class="msg-bubble">${msg.content}</div>`);
 
       let reactionHTML = msg.reaction ? `<div class="reaction-badge">${msg.reaction}</div>` : '';
       
       wrap.innerHTML = contentHTML + reactionHTML;
       const area = document.getElementById('messages-area');
-      area.appendChild(wrap);
-      area.scrollTop = area.scrollHeight;
+      area.appendChild(wrap); area.scrollTop = area.scrollHeight;
     }
 
     function subscribeToChanges() {
-      mySupabaseClient.channel('public:messages')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
+      mySupabaseClient.channel('public:messages').on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
           if(payload.eventType === 'INSERT') {
             const m = payload.new;
             if (m.receiver_id === currentProfile.id) {
-              if (activeFriendId === m.sender_id) {
-                renderMessage(m);
-              } else {
+              if (activeFriendId === m.sender_id) renderMessage(m);
+              else {
                 const sender = friendsList.find(f => f.id === m.sender_id);
-                const senderName = sender ? sender.username : "Một người bạn";
-                let msgPreview = m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content);
-                showAppNotification(`Tin nhắn từ ${senderName}`, msgPreview);
-                const previewEl = document.getElementById(`last-msg-${m.sender_id}`);
-                if(previewEl) previewEl.textContent = msgPreview;
+                showAppNotification(`Tin nhắn từ ${sender ? sender.username : "Bạn bè"}`, m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content));
               }
-            } else if (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId) {
-              renderMessage(m);
-            }
+            } else if (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId) renderMessage(m);
           } else if (payload.eventType === 'UPDATE') {
             const m = payload.new;
             if(activeFriendId) {
               const el = document.getElementById(`msg-${m.id}`);
               if(el && m.reaction) {
                 let badge = el.querySelector('.reaction-badge');
-                if(!badge) {
-                  badge = document.createElement('div');
-                  badge.className = 'reaction-badge';
-                  el.appendChild(badge);
-                }
+                if(!badge) { badge = document.createElement('div'); badge.className = 'reaction-badge'; el.appendChild(badge); }
                 badge.textContent = m.reaction;
               }
             }
-          }
-        }).subscribe();
-        
-      mySupabaseClient.channel('public:friends')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, (payload) => {
-          loadFriendsData();
-          if(payload.eventType === 'INSERT' && payload.new.receiver_id === currentProfile.id) {
-            showAppNotification("Bạn mới kìa!", "Ai đó vừa gửi lời mời kết bạn cho bạn.");
           }
         }).subscribe();
     }
