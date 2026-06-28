@@ -487,7 +487,8 @@
       }, 3000);
     }
 
-    function updateSettings() {
+    /* FIX 2: Cập nhật Settings đồng bộ với Database */
+    async function updateSettings() {
       const theme = document.getElementById('setting-theme').value;
       const fontSize = document.getElementById('setting-fontsize').value;
       const lang = document.getElementById('setting-language').value;
@@ -497,7 +498,20 @@
       localStorage.setItem('boba_lang', lang);
       
       applySettings();
-      showAppNotification('Thành công', 'Đã lưu cài đặt của bạn!');
+
+      if (currentProfile && currentProfile.id) {
+        const { error } = await mySupabaseClient.from('profiles')
+          .update({ theme: theme, font_size: fontSize, language: lang })
+          .eq('id', currentProfile.id);
+
+        if (error) {
+          showAppNotification('Lỗi', 'Không thể lưu cài đặt lên máy chủ!');
+        } else {
+          showAppNotification('Thành công', 'Đã lưu đồng bộ cài đặt của bạn!');
+        }
+      } else {
+        showAppNotification('Thành công', 'Đã lưu cài đặt của bạn!');
+      }
     }
 
     async function logout() {
@@ -744,12 +758,15 @@
           return; 
         }
     
-        // 1. Tạo tài khoản trên hệ thống Auth
+        /* FIX 1: Truyền trực tiếp tag vào meta_data để Database Trigger có thể bắt được */
         const { data, error } = await mySupabaseClient.auth.signUp({
           email: email,
           password: pass,
           options: {
-            data: { username: username }
+            data: { 
+              username: username,
+              tag: customId /* Thêm dòng này để fix lỗi ID không nạp vào bảng */
+            }
           }
         });
 
@@ -758,7 +775,7 @@
           return;
         }
 
-        // BƯỚC FIX QUAN TRỌNG: Kiểm tra xem user có phải xác nhận email không
+        // Kiểm tra xem user có phải xác nhận email không
         if (data.user && !data.session) {
           await showAppModal("Thành công!", "Tài khoản của bạn đã được tạo! Vui lòng kiểm tra hộp thư Email để xác nhận tài khoản trước khi đăng nhập nhé.");
           toggleAuthMode(false); // Chuyển về màn hình đăng nhập
@@ -770,7 +787,10 @@
             // Đợi 500ms cho Trigger Database tạo profile tự động chạy xong
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            // Xóa bỏ lệnh insert profiles thủ công để tránh xung đột với DB Trigger.
+            /* FIX 1 (Bổ sung): Update thủ công tag vào bảng profile để chắc chắn 100% database sẽ có tag,
+               phòng trường hợp DB Trigger không tự động lấy biến tag từ metadata. */
+            await mySupabaseClient.from('profiles').update({ tag: customId }).eq('id', data.user.id);
+            
             currentUser = data.user; 
             await loadApp();
         }
@@ -795,7 +815,10 @@
       const funcRes = await mySupabaseClient.from('app_functions').select('*');
       if(!funcRes.error && funcRes.data) appFunctionsList = funcRes.data;
 
+      /* Cập nhật LocalStorage dựa vào Database settings */
       if(currentProfile.theme) localStorage.setItem('boba_theme', currentProfile.theme);
+      if(currentProfile.font_size) localStorage.setItem('boba_fontsize', currentProfile.font_size);
+      if(currentProfile.language) localStorage.setItem('boba_lang', currentProfile.language);
       applySettings();
 
       document.getElementById('my-name').textContent = currentProfile.username;
