@@ -8,7 +8,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-color: #FDF8F5;       
+      /* Bảng màu Glassmorphism */
+      --bg-glass: rgba(253, 248, 245, 0.65); 
+      --bg-glass-heavy: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.8);
+      
       --primary: #D4A373;        
       --primary-dark: #B58453;
       --secondary: #FAEDCD;      
@@ -16,13 +20,15 @@
       --text-light: #9C7A5D;
       --white: #FFFFFF;
       --bubble-sent: #D4A373;
-      --bubble-recv: #FAEDCD;
+      --bubble-recv: rgba(255, 255, 255, 0.85);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Nunito', sans-serif; }
     
     body { 
       background-color: #eaddd3; 
+      /* Nền gradient nhẹ cho body để hiệu ứng kính mờ đẹp hơn */
+      background: linear-gradient(135deg, #eaddd3 0%, #f4e8df 100%);
       display: flex; 
       justify-content: center; 
       align-items: center; 
@@ -34,130 +40,147 @@
     /* Hiệu ứng Background ngẫu nhiên & mờ mờ */
     .boba-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
     .boba-icon-blur {
-      position: absolute; opacity: 0.15; filter: blur(2px);
+      position: absolute; opacity: 0.25; filter: blur(2px); /* Tăng nhẹ opacity để nhìn qua kính rõ hơn */
       animation: floatSlow linear infinite alternate;
     }
     @keyframes floatSlow {
       from { transform: translateY(0px) rotate(0deg); }
-      to { transform: translateY(-20px) rotate(10deg); }
+      to { transform: translateY(-30px) rotate(15deg); }
     }
 
-    /* In-app Toast Notifications */
+    /* In-app Toast Notifications - Nâng cấp Glassmorphism */
     #notification-container {
-      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-      z-index: 9999; width: 90%; max-width: 400px; pointer-events: none;
+      /* Hỗ trợ tai thỏ trên điện thoại */
+      position: fixed; top: max(20px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+      z-index: 99999; width: 90%; max-width: 400px; pointer-events: none;
       display: flex; flex-direction: column; gap: 10px;
     }
     .toast {
-      background: rgba(255, 255, 255, 0.95); border-left: 5px solid var(--primary);
-      padding: 12px 20px; border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px;
-      animation: slideDown 0.4s ease forwards; pointer-events: all;
+      background: var(--bg-glass-heavy); 
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-left: 5px solid var(--primary);
+      padding: 12px 20px; border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(94, 58, 37, 0.15); 
+      display: flex; align-items: center; gap: 12px;
+      animation: slideDown 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; pointer-events: all;
     }
-    .toast-content { flex: 1; }
+    .toast-content { flex: 1; overflow: hidden; }
     .toast-title { color: var(--primary); font-weight: 800; font-size: 1rem; margin-bottom: 2px;}
-    .toast-msg { color: var(--text-main); font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;}
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    .toast-msg { color: var(--text-main); font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* App Container - Glassmorphism Base */
     .app-container { 
-      width: 100%; max-width: 480px; background: var(--bg-color); height: 100vh; 
+      width: 100%; max-width: 480px; 
+      background: var(--bg-glass); 
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      height: 100vh; 
       position: relative; overflow: hidden; display: flex; flex-direction: column; 
-      box-shadow: 0 10px 30px rgba(94, 58, 37, 0.15); z-index: 1;
+      box-shadow: 0 10px 40px rgba(94, 58, 37, 0.15); z-index: 1;
     }
     
-    @media (min-width: 481px) { .app-container { height: 90vh; border-radius: 24px; } }
+    @media (min-width: 481px) { .app-container { height: 92vh; border-radius: 28px; } }
 
     /* Auth & Inputs */
     .auth-panel { padding: 40px 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
-    .auth-title { text-align: center; font-size: 2rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; }
-    .auth-subtitle { text-align: center; font-size: 1rem; color: var(--text-light); margin-top: -15px; margin-bottom: 20px; }
-    .input-cute { padding: 15px; border: 2px solid #EFE4D8; border-radius: 16px; font-size: 1rem; outline: none; background: var(--white); color: var(--text-main); font-weight: 600; transition: all 0.3s;}
-    .input-cute:focus { border-color: var(--primary); box-shadow: 0 4px 12px rgba(212, 163, 115, 0.2); }
-    .btn-cute { padding: 15px; background: var(--primary); color: var(--white); border: none; border-radius: 16px; cursor: pointer; font-weight: 800; font-size: 1.1rem; transition: background 0.2s; }
-    .btn-cute:active { transform: scale(0.98); }
+    .auth-title { text-align: center; font-size: 2.2rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .auth-subtitle { text-align: center; font-size: 1rem; color: var(--text-light); margin-top: -15px; margin-bottom: 20px; font-weight: 700;}
+    .input-cute { padding: 16px; border: 1px solid rgba(255,255,255,0.6); border-radius: 18px; font-size: 1rem; outline: none; background: rgba(255,255,255,0.7); color: var(--text-main); font-weight: 600; transition: all 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);}
+    .input-cute:focus { border-color: var(--primary); background: var(--white); box-shadow: 0 4px 15px rgba(212, 163, 115, 0.2); transform: translateY(-1px); }
+    .btn-cute { padding: 16px; background: var(--primary); color: var(--white); border: none; border-radius: 18px; cursor: pointer; font-weight: 800; font-size: 1.1rem; transition: all 0.2s; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
+    .btn-cute:active { transform: scale(0.96); box-shadow: 0 2px 8px rgba(212, 163, 115, 0.2); }
     .register-fields { display: none; flex-direction: column; gap: 15px; }
     .id-container { display: flex; justify-content: space-between; gap: 10px; }
-    .id-box { width: 100%; height: 55px; font-size: 1.5rem; text-align: center; border: 2px solid #EFE4D8; border-radius: 14px; outline: none; font-weight: 800; color: var(--text-main); }
+    .id-box { width: 100%; height: 55px; font-size: 1.5rem; text-align: center; border: 1px solid rgba(255,255,255,0.6); background: rgba(255,255,255,0.7); border-radius: 16px; outline: none; font-weight: 800; color: var(--text-main); transition: all 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); }
+    .id-box:focus { background: var(--white); border-color: var(--primary); }
     
     /* App Layout */
     .screen { display: none; flex-direction: column; height: 100%; width: 100%; }
     .screen.active { display: flex; animation: fadeIn 0.4s ease; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    .header-bar { padding: 20px; background: var(--white); border-bottom: 1px solid #EFE4D8; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    .header-bar { padding: 20px; background: var(--bg-glass-heavy); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; padding-top: max(20px, env(safe-area-inset-top));}
     .header-title { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
     
     /* Tabs & Nav */
-    .tab-content { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+    .tab-content { flex: 1; overflow-y: auto; padding-bottom: 90px; }
     .tab-pane { display: none; flex-direction: column; }
     .tab-pane.active { display: flex; }
-    .bottom-nav { position: absolute; bottom: 0; width: 100%; height: 70px; background: var(--white); border-top: 1px solid #EFE4D8; display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); border-radius: 20px 20px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.03); z-index: 20;}
-    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-light); font-weight: 700; font-size: 0.8rem; gap: 4px; cursor: pointer; flex: 1; padding: 10px 0; transition: color 0.2s;}
-    .nav-item.active { color: var(--primary); transform: scale(1.05); }
-    .nav-icon { font-size: 1.5rem; }
+    
+    .bottom-nav { position: absolute; bottom: 0; width: 100%; height: 75px; background: var(--bg-glass-heavy); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); border-radius: 24px 24px 0 0; box-shadow: 0 -4px 25px rgba(94, 58, 37, 0.08); z-index: 20;}
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-light); font-weight: 700; font-size: 0.8rem; gap: 4px; cursor: pointer; flex: 1; padding: 10px 0; transition: all 0.3s;}
+    .nav-item.active { color: var(--primary); transform: translateY(-3px) scale(1.05); }
+    .nav-icon { font-size: 1.5rem; transition: transform 0.3s; }
+    .nav-item.active .nav-icon { text-shadow: 0 4px 10px rgba(212, 163, 115, 0.4); }
 
     /* Lists */
-    .friend-item { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #F5EBE1; cursor: pointer; background: var(--white); margin: 8px 15px; border-radius: 16px; box-shadow: 0 2px 8px rgba(94, 58, 37, 0.04); transition: transform 0.2s; }
-    .friend-item:active { transform: scale(0.98); background: var(--bg-color); }
-    .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--secondary); background: var(--secondary); }
+    .friend-item { display: flex; align-items: center; padding: 15px 20px; border: 1px solid rgba(255,255,255,0.5); cursor: pointer; background: rgba(255,255,255,0.6); margin: 10px 15px; border-radius: 20px; box-shadow: 0 4px 12px rgba(94, 58, 37, 0.03); transition: all 0.2s; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);}
+    .friend-item:active { transform: scale(0.97); background: rgba(255,255,255,0.4); }
+    .avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--white); background: var(--secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.1);}
     .friend-info { margin-left: 15px; flex: 1; overflow: hidden; }
     .friend-name { font-weight: 800; font-size: 1.1rem; display: flex; align-items: baseline; justify-content: space-between;}
-    .friend-tag { font-size: 0.8rem; color: var(--primary); background: #FFF4E6; padding: 2px 6px; border-radius: 6px; }
+    .friend-tag { font-size: 0.8rem; color: var(--primary); background: rgba(255, 244, 230, 0.8); padding: 2px 8px; border-radius: 8px; font-weight: bold;}
     .last-msg { font-size: 0.9rem; color: var(--text-light); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
     
     /* Requests */
     .request-btn-group { display: flex; gap: 8px; margin-top: 8px; }
-    .btn-accept { background: #8BC34A; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer;}
-    .btn-reject { background: #E57373; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer;}
+    .btn-accept { background: #8BC34A; color: white; border: none; padding: 8px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(139, 195, 74, 0.3);}
+    .btn-reject { background: #E57373; color: white; border: none; padding: 8px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(229, 115, 115, 0.3);}
 
-    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); font-weight: 600; }
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--text-light); font-weight: 700; font-size: 1.1rem; }
 
     /* Profile Tab */
-    .profile-header { display: flex; flex-direction: column; align-items: center; padding: 30px 20px; background: var(--white); margin-bottom: 10px; border-radius: 0 0 24px 24px; }
-    .profile-avatar { width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--primary); margin-bottom: 10px; }
-    .profile-name { font-size: 1.5rem; font-weight: 800; }
-    .add-friend-card { background: var(--white); margin: 15px; padding: 20px; border-radius: 16px; }
-    .add-friend-box { display: flex; gap: 10px; margin-top: 10px; }
-    .add-friend-box input { flex: 1; border-radius: 12px; border: 2px solid #EFE4D8; padding: 10px 15px; outline: none; font-weight: 600;}
-    .add-friend-box button { background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+    .profile-header { display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background: var(--bg-glass-heavy); backdrop-filter: blur(10px); border-bottom: 1px solid var(--glass-border); margin-bottom: 15px; border-radius: 0 0 30px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.02);}
+    .profile-avatar { width: 95px; height: 95px; border-radius: 50%; border: 4px solid var(--white); margin-bottom: 12px; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3);}
+    .profile-name { font-size: 1.6rem; font-weight: 800; }
+    .add-friend-card { background: rgba(255,255,255,0.6); backdrop-filter: blur(8px); margin: 15px; padding: 20px; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 4px 15px rgba(0,0,0,0.03);}
+    .add-friend-box { display: flex; gap: 10px; margin-top: 12px; }
+    .add-friend-box input { flex: 1; border-radius: 14px; border: 1px solid rgba(255,255,255,0.8); background: rgba(255,255,255,0.8); padding: 12px 15px; outline: none; font-weight: 600;}
+    .add-friend-box button { background: var(--primary); color: white; border: none; padding: 0 22px; border-radius: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(212, 163, 115, 0.3);}
 
-    /* Chat Room */
-    .chat-room { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 50; display: none; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    /* Chat Room - Cải thiện Glassmorphism để thấy nền */
+    .chat-room { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 50; display: none; flex-direction: column; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .chat-room.active { display: flex; transform: translateX(0); }
-    .chat-room-header { background: var(--white); padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid #EFE4D8; gap: 15px; padding-top: env(safe-area-inset-top); }
-    .back-btn { background: none; border: none; font-size: 1.5rem; color: var(--primary); cursor: pointer; width: 40px; height: 40px; border-radius: 50%; background: #FFF4E6; display: flex; justify-content: center; align-items: center;}
+    .chat-room-header { background: var(--bg-glass-heavy); backdrop-filter: blur(10px); padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid var(--glass-border); gap: 15px; padding-top: max(15px, env(safe-area-inset-top)); box-shadow: 0 2px 10px rgba(0,0,0,0.02);}
+    .back-btn { background: rgba(255, 244, 230, 0.8); border: 1px solid var(--white); font-size: 1.2rem; color: var(--primary); cursor: pointer; width: 42px; height: 42px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s;}
+    .back-btn:active { transform: scale(0.9); }
     
-    .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; position: relative;}
+    .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; position: relative; scroll-behavior: smooth;}
     
     /* Message Bubbles */
-    .msg-wrapper { display: flex; flex-direction: column; max-width: 75%; position: relative; cursor: pointer; }
+    .msg-wrapper { display: flex; flex-direction: column; max-width: 78%; position: relative; cursor: pointer; }
     .msg-wrapper.sent { align-self: flex-end; align-items: flex-end; }
     .msg-wrapper.received { align-self: flex-start; align-items: flex-start; }
     
-    .msg-bubble { padding: 12px 16px; border-radius: 20px; font-size: 0.95rem; line-height: 1.4; font-weight: 600; word-wrap: break-word; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .msg-wrapper.sent .msg-bubble { background: var(--bubble-sent); color: var(--white); border-bottom-right-radius: 4px; }
-    .msg-wrapper.received .msg-bubble { background: var(--white); color: var(--text-main); border: 1px solid #EFE4D8; border-bottom-left-radius: 4px; }
+    .msg-bubble { padding: 14px 18px; border-radius: 22px; font-size: 0.95rem; line-height: 1.45; font-weight: 600; word-wrap: break-word; position: relative; box-shadow: 0 3px 10px rgba(0,0,0,0.04); }
+    .msg-wrapper.sent .msg-bubble { background: var(--bubble-sent); color: var(--white); border-bottom-right-radius: 6px; }
+    .msg-wrapper.received .msg-bubble { background: var(--bubble-recv); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); color: var(--text-main); border: 1px solid var(--glass-border); border-bottom-left-radius: 6px; }
     
     /* Hình ảnh & Sticker */
-    .msg-img { max-width: 200px; border-radius: 12px; margin-top: 5px; cursor: pointer; border: 2px solid #EFE4D8; }
-    .msg-sticker { font-size: 4rem; line-height: 1; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+    .msg-img { max-width: 220px; border-radius: 16px; margin-top: 5px; cursor: pointer; border: 2px solid var(--white); box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
+    .msg-sticker { font-size: 4.5rem; line-height: 1; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1)); }
     
     /* Reaction Badge */
-    .reaction-badge { position: absolute; bottom: -10px; right: -5px; background: white; border-radius: 50%; padding: 2px 4px; font-size: 0.8rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #EFE4D8; }
+    .reaction-badge { position: absolute; bottom: -12px; right: -5px; background: rgba(255,255,255,0.95); border-radius: 20px; padding: 3px 6px; font-size: 0.85rem; box-shadow: 0 3px 8px rgba(0,0,0,0.12); border: 1px solid var(--glass-border); backdrop-filter: blur(4px); z-index: 2;}
     .msg-wrapper.received .reaction-badge { right: auto; left: -5px; }
 
-    /* Input Area */
-    .chat-input-area { padding: 10px 15px; background: var(--white); border-top: 1px solid #EFE4D8; display: flex; align-items: center; gap: 8px; padding-bottom: env(safe-area-inset-bottom); position: relative;}
-    .icon-btn { background: #FFF4E6; color: var(--primary); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;}
-    .chat-input-area input[type="text"] { flex: 1; padding: 12px 15px; border: 2px solid #EFE4D8; border-radius: 24px; outline: none; font-size: 0.95rem; background: var(--bg-color); }
-    .chat-input-area button[type="submit"] { background: var(--primary); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; flex-shrink: 0; }
+    /* Input Area - Cải thiện Glassmorphism */
+    .chat-input-area { padding: 12px 15px; background: var(--bg-glass-heavy); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--glass-border); display: flex; align-items: center; gap: 10px; padding-bottom: max(12px, env(safe-area-inset-bottom)); position: relative; box-shadow: 0 -5px 20px rgba(0,0,0,0.02);}
+    .icon-btn { background: rgba(255, 244, 230, 0.8); color: var(--primary); border: 1px solid var(--white); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.2s;}
+    .icon-btn:active { transform: scale(0.9); }
+    .chat-input-area input[type="text"] { flex: 1; padding: 14px 18px; border: 1px solid rgba(255,255,255,0.8); border-radius: 24px; outline: none; font-size: 0.95rem; background: rgba(255,255,255,0.6); color: var(--text-main); font-weight: 600; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); transition: background 0.3s;}
+    .chat-input-area input[type="text"]:focus { background: var(--white); }
+    .chat-input-area button[type="submit"] { background: var(--primary); color: white; border: none; width: 46px; height: 46px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(212, 163, 115, 0.4); transition: transform 0.2s;}
+    .chat-input-area button[type="submit"]:active { transform: scale(0.9); }
     
     /* Sticker Panel */
-    .sticker-panel { display: none; position: absolute; bottom: 70px; left: 15px; background: white; border: 2px solid #EFE4D8; border-radius: 16px; padding: 10px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); gap: 10px; flex-wrap: wrap; width: 250px; z-index: 60;}
-    .sticker-panel.active { display: flex; animation: slideUp 0.3s ease; }
-    .sticker-item { font-size: 2rem; cursor: pointer; transition: transform 0.2s; }
-    .sticker-item:hover { transform: scale(1.2); }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .sticker-panel { display: none; position: absolute; bottom: 85px; left: 15px; background: rgba(255,255,255,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 15px; box-shadow: 0 -10px 30px rgba(0,0,0,0.1); gap: 12px; flex-wrap: wrap; width: 260px; z-index: 60;}
+    .sticker-panel.active { display: flex; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .sticker-item { font-size: 2.2rem; cursor: pointer; transition: transform 0.2s; }
+    .sticker-item:hover, .sticker-item:active { transform: scale(1.25); }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(15px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
   </style>
 </head>
@@ -170,7 +193,7 @@
   <div class="app-container">
     
     <div id="auth-screen" class="screen active auth-panel">
-      <div style="text-align: center; margin-bottom: 10px; font-size: 4rem;">🧋</div>
+      <div style="text-align: center; margin-bottom: 10px; font-size: 4.5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));">🧋</div>
       <h2 id="auth-title" class="auth-title">Xin chào!</h2>
       <p id="auth-subtitle" class="auth-subtitle">Đăng nhập vào Boba Chat</p>
       
@@ -179,7 +202,7 @@
       
       <div id="register-fields" class="register-fields">
         <input type="text" id="username" class="input-cute" placeholder="Tên hiển thị (VD: Huy)">
-        <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: -10px; font-weight: bold;">Nhập ID 4 số của bạn:</p>
+        <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: -10px; font-weight: bold; padding-left: 5px;">Nhập ID 4 số của bạn:</p>
         <div class="id-container">
           <input type="text" maxlength="1" class="id-box">
           <input type="text" maxlength="1" class="id-box">
@@ -189,7 +212,7 @@
       </div>
 
       <button id="auth-btn" class="btn-cute" onclick="handleAuth()">Đăng nhập</button>
-      <p id="toggle-auth-text" style="text-align: center; font-size: 0.95rem; margin-top: 10px; font-weight: 600;">
+      <p id="toggle-auth-text" style="text-align: center; font-size: 0.95rem; margin-top: 10px; font-weight: 700;">
         Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng ký ngay</a>
       </p>
     </div>
@@ -204,27 +227,27 @@
       <div id="tab-account" class="tab-pane">
         <div class="header-bar">
           <span class="header-title">Hồ sơ 👤</span>
-          <button onclick="logout()" style="background:none; border:none; color:#d9534f; font-weight:bold; cursor:pointer;">Đăng xuất</button>
+          <button onclick="logout()" style="background:rgba(217, 83, 79, 0.1); border:1px solid rgba(217, 83, 79, 0.2); color:#d9534f; padding: 6px 14px; border-radius: 12px; font-weight:800; cursor:pointer;">Đăng xuất</button>
         </div>
         <div class="tab-content">
           <div class="profile-header">
             <img id="my-avatar" class="profile-avatar" src="" alt="Avatar">
             <div class="profile-name" id="my-name">Tên hiển thị</div>
-            <div style="color: var(--primary); font-weight: 800; background: #FFF4E6; padding: 4px 12px; border-radius: 12px; margin-top: 8px;" id="my-tag">#0000</div>
+            <div style="color: var(--primary); font-weight: 800; background: rgba(255,244,230,0.8); padding: 4px 14px; border-radius: 12px; margin-top: 8px; border: 1px solid var(--white);" id="my-tag">#0000</div>
           </div>
 
           <div class="add-friend-card">
-            <h3 style="color: var(--text-main);">Thêm bạn bè mới</h3>
+            <h3 style="color: var(--text-main); margin-bottom: 5px;">Thêm bạn bè mới</h3>
             <div class="add-friend-box">
               <input type="text" id="friend-search" placeholder="Nhập Tên#1234">
               <button onclick="sendFriendRequest()">Gửi</button>
             </div>
           </div>
           
-          <h3 style="margin: 20px 20px 5px 20px; font-size: 1.1rem; color: var(--text-main);">Lời mời kết bạn</h3>
+          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; font-weight: 800; color: var(--text-main);">Lời mời kết bạn</h3>
           <div id="friend-requests-list"></div>
 
-          <h3 style="margin: 20px 20px 5px 20px; font-size: 1.1rem; color: var(--text-main);">Danh sách bạn bè</h3>
+          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; font-weight: 800; color: var(--text-main);">Danh sách bạn bè</h3>
           <div id="account-friend-list"></div>
         </div>
       </div>
@@ -242,8 +265,8 @@
     <div id="chat-room" class="chat-room">
       <div class="chat-room-header">
         <button class="back-btn" onclick="closeChat()">❮</button>
-        <img id="chat-room-avatar" class="avatar" style="width: 45px; height: 45px;" src="">
-        <div class="friend-name" style="font-size: 1.2rem;" id="chat-room-name"></div>
+        <img id="chat-room-avatar" class="avatar" style="width: 46px; height: 46px;" src="">
+        <div class="friend-name" style="font-size: 1.25rem;" id="chat-room-name"></div>
       </div>
       
       <div class="messages-area" id="messages-area"></div>
@@ -266,7 +289,7 @@
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
         
         <form id="chat-form" style="display: flex; flex: 1; gap: 8px;">
-          <input type="text" id="message-input" placeholder="Gửi tin nhắn" autocomplete="off">
+          <input type="text" id="message-input" placeholder="Gửi tin nhắn..." autocomplete="off">
           <button type="submit">➤</button>
         </form>
       </div>
@@ -278,18 +301,17 @@
     // --- KHỞI TẠO NỀN BOBA NGẪU NHIÊN VÀ MỜ MỜ ---
     function createBobas() {
       const bg = document.getElementById('boba-bg');
-      bg.innerHTML = ''; // Làm sạch nền trước khi tạo mới
+      bg.innerHTML = ''; 
       const icons = ['🧋', '🌸', '✨', '🤍', '🍡'];
-      // Tạo ra 40 icon ngẫu nhiên trên toàn bộ màn hình
       for (let i = 0; i < 40; i++) {
         const icon = document.createElement('div');
         icon.className = 'boba-icon-blur';
         icon.innerText = icons[Math.floor(Math.random() * icons.length)];
         icon.style.left = Math.random() * 100 + 'vw';
         icon.style.top = Math.random() * 100 + 'vh';
-        icon.style.fontSize = (Math.random() * 1.5 + 1.5) + 'rem';
-        icon.style.animationDuration = (Math.random() * 3 + 3) + 's';
-        icon.style.animationDelay = `-${Math.random() * 2}s`;
+        icon.style.fontSize = (Math.random() * 1.5 + 1.8) + 'rem';
+        icon.style.animationDuration = (Math.random() * 4 + 4) + 's';
+        icon.style.animationDelay = `-${Math.random() * 3}s`;
         bg.appendChild(icon);
       }
     }
@@ -301,7 +323,7 @@
       const toast = document.createElement('div');
       toast.className = 'toast';
       toast.innerHTML = `
-        <span style="font-size: 1.8rem;">🧋</span>
+        <span style="font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🧋</span>
         <div class="toast-content">
           <div class="toast-title">${title}</div>
           <div class="toast-msg">${message}</div>
@@ -309,16 +331,16 @@
       `;
       container.appendChild(toast);
       
-      // Tự động ẩn đi sau 4 giây
+      // Tự động ẩn đi sau 4.5 giây
       setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-20px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-      }, 4000);
+        toast.style.transform = 'translateY(-30px)';
+        toast.style.transition = 'all 0.4s cubic-bezier(0.25, 1, 0.5, 1)';
+        setTimeout(() => toast.remove(), 400);
+      }, 4500);
     }
 
-    // --- CẤU HÌNH SUPABASE ---
+    // --- CẤU HÌNH SUPABASE (Giữ nguyên của bạn) ---
     const supabaseUrl = 'https://pkkbimyhlruwdlsrgcvy.supabase.co';
     const supabaseSecretKey = 'sb_publishable_gYFKPW27BdH7LcsGq4flCQ_5bHG2dF3'; 
     const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
@@ -352,8 +374,8 @@
       document.getElementById('register-fields').style.display = isRegister ? 'flex' : 'none';
       document.getElementById('auth-btn').textContent = isRegister ? 'Tạo tài khoản' : 'Đăng nhập';
       document.getElementById('toggle-auth-text').innerHTML = isRegister 
-        ? `Đã có tài khoản? <a href="#" onclick="toggleAuthMode(false)">Đăng nhập</a>` 
-        : `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true)">Đăng ký ngay</a>`;
+        ? `Đã có tài khoản? <a href="#" onclick="toggleAuthMode(false); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng nhập</a>` 
+        : `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true); return false;" style="color: var(--primary); font-weight: 800; text-decoration: none;">Đăng ký ngay</a>`;
     }
 
     async function handleAuth() {
@@ -427,7 +449,7 @@
         const avatar = getAvatarUrl(fProfile.username + fProfile.tag);
 
         if (rel.status === 'pending') {
-          if (!isSender) { // Người khác gửi cho mình
+          if (!isSender) { 
             reqList.innerHTML += `
               <div class="friend-item">
                 <img class="avatar" src="${avatar}">
@@ -442,7 +464,6 @@
           }
         } else if (rel.status === 'accepted') {
           friendsList.push(fProfile);
-          // Render bên Tab Account
           accList.innerHTML += `
             <div class="friend-item">
               <img class="avatar" src="${avatar}">
@@ -451,7 +472,6 @@
               </div>
             </div>`;
             
-          // Lấy tin nhắn cuối cho Tab Chat
           const { data: lastMsg } = await mySupabaseClient.from('messages')
             .select('content, is_sticker, image_url')
             .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fProfile.id}),and(sender_id.eq.${fProfile.id},receiver_id.eq.${currentProfile.id})`)
@@ -481,15 +501,16 @@
 
     async function sendFriendRequest() {
       const q = document.getElementById('friend-search').value.trim();
-      if(!q.includes('#')) return alert('Ghi đúng tên#ID nha!');
+      if(!q.includes('#')) return alert('Ghi đúng định dạng Tên#ID nha bạn yêu ơi!');
       const [u, t] = q.split('#');
       
       const { data: f } = await mySupabaseClient.from('profiles').select('id').eq('username', u).eq('tag', t).single();
-      if(!f) return alert('Tìm không thấy bạn này :(');
-      if(f.id === currentProfile.id) return alert('Sao lại tự kết bạn với mình?');
+      if(!f) return alert('Hổng tìm thấy bạn này :(');
+      if(f.id === currentProfile.id) return alert('Đừng tự gửi lời mời kết bạn cho chính mình chứ!');
 
       await mySupabaseClient.from('friends').insert([{ sender_id: currentProfile.id, receiver_id: f.id, status: 'pending' }]);
-      alert('Đã gửi lời mời!'); document.getElementById('friend-search').value = '';
+      showAppNotification('Thành công', 'Đã gửi lời mời kết bạn thành công!'); 
+      document.getElementById('friend-search').value = '';
     }
 
     async function respondRequest(relId, status) {
@@ -514,7 +535,7 @@
         .order('created_at', { ascending: true });
         
       if(msgs) msgs.forEach(m => renderMessage(m));
-      setTimeout(() => area.scrollTo(0, area.scrollHeight), 100);
+      setTimeout(() => area.scrollTo(0, area.scrollHeight), 150);
     }
     
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
@@ -544,10 +565,12 @@
     async function uploadImage(e) {
       const file = e.target.files[0];
       if(!file || !activeFriendId) return;
+      
+      showAppNotification('Đang gửi...', 'Hình ảnh của bạn đang được tải lên');
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       
-      // Upload lên Supabase Storage (Bucket phải là 'chat_images' public)
       const { data, error } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
       if(error) return alert("Lỗi tải ảnh: " + error.message);
       
@@ -557,7 +580,7 @@
 
     // Thả tim/Reaction (Click đúp)
     async function reactToMessage(msgId) {
-      const reaction = prompt("Nhập icon để thả tim (VD: ❤️, 👍, 😂):", "❤️");
+      const reaction = prompt("Thả icon nào nè (VD: ❤️, 👍, 😂):", "❤️");
       if(reaction) {
         await mySupabaseClient.from('messages').update({ reaction: reaction }).eq('id', msgId);
       }
@@ -568,7 +591,7 @@
       const wrap = document.createElement('div');
       wrap.className = `msg-wrapper ${isMe ? 'sent' : 'received'}`;
       wrap.id = `msg-${msg.id}`;
-      wrap.ondblclick = () => reactToMessage(msg.id); // Double click để thả tim
+      wrap.ondblclick = () => reactToMessage(msg.id); 
 
       let contentHTML = '';
       if(msg.is_sticker) {
@@ -589,31 +612,25 @@
 
     // Lắng nghe Real-time Data và Kích hoạt Thông Báo
     function subscribeToChanges() {
-      // Nghe tin nhắn mới hoặc reaction mới
       mySupabaseClient.channel('public:messages')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
           if(payload.eventType === 'INSERT') {
             const m = payload.new;
             
             if (m.receiver_id === currentProfile.id) {
-              // Nếu người khác gửi cho mình
               if (activeFriendId === m.sender_id) {
-                // Đang mở đoạn chat với người đó -> render tin nhắn trực tiếp
                 renderMessage(m);
               } else {
-                // Không mở đoạn chat -> Hiển thị thông báo In-app
                 const sender = friendsList.find(f => f.id === m.sender_id);
-                const senderName = sender ? sender.username : "Ai đó";
+                const senderName = sender ? sender.username : "Một người bạn";
                 let msgPreview = m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content);
                 
                 showAppNotification(`Tin nhắn từ ${senderName}`, msgPreview);
                 
-                // Cập nhật text preview ngoài danh sách chat
                 const previewEl = document.getElementById(`last-msg-${m.sender_id}`);
                 if(previewEl) previewEl.textContent = msgPreview;
               }
             } else if (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId) {
-              // Nếu là mình gửi (để hiển thị trên màn hình của mình)
               renderMessage(m);
             }
 
@@ -634,7 +651,6 @@
           }
         }).subscribe();
         
-      // Nghe thay đổi bạn bè (để cập nhật danh sách lời mời và thông báo)
       mySupabaseClient.channel('public:friends')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, (payload) => {
           loadFriendsData();
