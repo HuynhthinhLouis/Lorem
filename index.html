@@ -311,7 +311,7 @@
 
       <div id="tab-account" class="tab-pane">
         <div class="header-bar">
-          <span class="header-title" data-i18n="nav_account">Hồ sơ</span>
+          <span class="header-title" data-i18n="nav_account">Hồ sơ 👤</span>
           <button onclick="logout()" style="background:rgba(217, 83, 79, 0.1); border:1px solid rgba(217, 83, 79, 0.2); color:#d9534f; padding: 6px 14px; border-radius: 12px; font-weight:800; cursor:pointer;" data-i18n="btn_logout">Đăng xuất</button>
         </div>
         <div class="tab-content">
@@ -468,19 +468,54 @@
     let currentUser = null; let currentProfile = null; let activeFriendId = null; 
     let isRegisterMode = false; let friendsList = [];
 
-    // HÀM LƯU CÀI ĐẶT VÀO DATABASE BÊN CẠNH LOCAL STORAGE
+    // --- QUẢN LÝ LOCAL STORAGE & ĐỒNG BỘ ---
+    function getLocalMessages(fid) {
+      const data = localStorage.getItem(`boba_chat_${currentProfile.id}_${fid}`);
+      return data ? JSON.parse(data) : [];
+    }
+
+    function saveMessageLocal(msg, fid) {
+      const msgs = getLocalMessages(fid);
+      if (!msgs.find(m => m.id === msg.id)) {
+        msgs.push(msg);
+        localStorage.setItem(`boba_chat_${currentProfile.id}_${fid}`, JSON.stringify(msgs));
+      }
+    }
+
+    function updateLocalReaction(msgId, fid, emoji) {
+      const msgs = getLocalMessages(fid);
+      const m = msgs.find(m => m.id === msgId);
+      if (m) {
+        m.reaction = emoji;
+        localStorage.setItem(`boba_chat_${currentProfile.id}_${fid}`, JSON.stringify(msgs));
+      }
+    }
+
+    async function syncPendingMessages() {
+      const { data } = await mySupabaseClient.from('messages').select('*').eq('receiver_id', currentProfile.id);
+      if (data && data.length > 0) {
+        for (let m of data) {
+          if (m.image_url === 'system_reaction') {
+            const payload = JSON.parse(m.content);
+            updateLocalReaction(payload.msgId, m.sender_id, payload.emoji);
+          } else {
+            saveMessageLocal(m, m.sender_id);
+          }
+          await mySupabaseClient.from('messages').delete().eq('id', m.id);
+        }
+      }
+    }
+
     async function updateSettings() {
       const theme = document.getElementById('setting-theme').value;
       const fontSize = document.getElementById('setting-fontsize').value;
       const lang = document.getElementById('setting-language').value;
 
-      // 1. Lưu Local & Áp dụng ngay lập tức cho mượt
       localStorage.setItem('boba_theme', theme);
       localStorage.setItem('boba_fontsize', fontSize);
       localStorage.setItem('boba_lang', lang);
       applySettings();
 
-      // 2. Đẩy lên Supabase nếu đã đăng nhập
       if (currentUser) {
         await mySupabaseClient.from('profiles').update({
           theme: theme,
@@ -490,7 +525,7 @@
       }
     }
     
-    applySettings(); // Chạy ngay khi mở webapp lần đầu
+    applySettings(); 
 
     function createBobas() {
       const bg = document.getElementById('boba-bg');
@@ -596,7 +631,6 @@
       const { data } = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
       currentProfile = data;
 
-      // ĐỒNG BỘ TỪ DB XUỐNG MÁY KHÁCH KHI ĐĂNG NHẬP
       if(data.theme) localStorage.setItem('boba_theme', data.theme);
       if(data.font_size) localStorage.setItem('boba_fontsize', data.font_size);
       if(data.language) localStorage.setItem('boba_lang', data.language);
@@ -607,6 +641,8 @@
       document.getElementById('my-avatar').src = getAvatarUrl(data.username + data.tag);
       document.getElementById('auth-screen').classList.remove('active');
       document.getElementById('main-screen').classList.add('active');
+      
+      await syncPendingMessages(); 
       await loadFriendsData();
       subscribeToChanges();
     }
@@ -656,12 +692,13 @@
           friendsList.push(fProfile);
           accList.innerHTML += `<div class="friend-item"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name">${fProfile.username} <span class="friend-tag">#${fProfile.tag}</span></div></div></div>`;
             
-          const { data: lastMsg } = await mySupabaseClient.from('messages').select('content, is_sticker, image_url').or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fProfile.id}),and(sender_id.eq.${fProfile.id},receiver_id.eq.${currentProfile.id})`).order('created_at', { ascending: false }).limit(1);
+          const localMsgs = getLocalMessages(fProfile.id);
           let text = lang === 'en' ? 'Tap to chat...' : 'Bấm để chat nè...';
-          if(lastMsg && lastMsg.length > 0) {
-            if(lastMsg[0].is_sticker) text = '[Sticker]';
-            else if(lastMsg[0].image_url) text = lang === 'en' ? '[Image]' : '[Hình ảnh]';
-            else text = lastMsg[0].content;
+          if (localMsgs.length > 0) {
+            const last = localMsgs[localMsgs.length - 1];
+            if (last.is_sticker) text = '[Sticker]';
+            else if (last.image_url && last.image_url !== 'system_reaction') text = lang === 'en' ? '[Image]' : '[Hình ảnh]';
+            else text = last.content;
           }
 
           chatList.innerHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}')"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name">${fProfile.username}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
@@ -696,10 +733,10 @@
       document.getElementById('chat-room-avatar').src = getAvatarUrl(name+tag);
       document.getElementById('chat-room').classList.add('active');
       document.getElementById('sticker-panel').classList.remove('active');
-      const area = document.getElementById('messages-area'); area.innerHTML = '';
       
-      const { data: msgs } = await mySupabaseClient.from('messages').select('*').or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fid}),and(sender_id.eq.${fid},receiver_id.eq.${currentProfile.id})`).order('created_at', { ascending: true });
-      if(msgs) msgs.forEach(m => renderMessage(m));
+      const area = document.getElementById('messages-area'); area.innerHTML = '';
+      const msgs = getLocalMessages(fid);
+      msgs.forEach(m => renderMessage(m));
       setTimeout(() => area.scrollTo(0, area.scrollHeight), 150);
     }
     
@@ -708,12 +745,25 @@
 
     document.getElementById('chat-form').addEventListener('submit', async (e) => {
       e.preventDefault(); const input = document.getElementById('message-input'); const text = input.value.trim();
-      if(text && activeFriendId) { input.value = ''; await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: text }]); }
+      if(text && activeFriendId) { 
+        input.value = ''; 
+        const { data } = await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: text }]).select();
+        if (data && data.length > 0) {
+          saveMessageLocal(data[0], activeFriendId);
+          renderMessage(data[0]);
+        }
+      }
     });
 
     async function sendSticker(emoji) {
       toggleStickers();
-      if(activeFriendId) await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: emoji, is_sticker: true }]);
+      if(activeFriendId) {
+        const { data } = await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: emoji, is_sticker: true }]).select();
+        if (data && data.length > 0) {
+          saveMessageLocal(data[0], activeFriendId);
+          renderMessage(data[0]);
+        }
+      }
     }
 
     async function uploadImage(e) {
@@ -723,7 +773,12 @@
       const { error } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
       if(error) { await showAppModal("Lỗi tải ảnh", error.message); return; }
       const imgUrl = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
-      await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: imgUrl }]);
+      
+      const { data } = await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: imgUrl }]).select();
+      if (data && data.length > 0) {
+          saveMessageLocal(data[0], activeFriendId);
+          renderMessage(data[0]);
+      }
     }
 
     // --- REACTION LOGIC ---
@@ -740,9 +795,23 @@
     }
 
     async function submitReaction(emoji) {
-      if (activeReactionMsgId) {
+      if (activeReactionMsgId && activeFriendId) {
         document.getElementById('reaction-overlay').classList.remove('active');
-        await mySupabaseClient.from('messages').update({ reaction: emoji }).eq('id', activeReactionMsgId);
+        
+        updateLocalReaction(activeReactionMsgId, activeFriendId, emoji);
+        const el = document.getElementById(`msg-${activeReactionMsgId}`);
+        if(el) {
+          let badge = el.querySelector('.reaction-badge');
+          if(!badge) { badge = document.createElement('div'); badge.className = 'reaction-badge'; el.appendChild(badge); }
+          badge.textContent = emoji;
+        }
+
+        await mySupabaseClient.from('messages').insert([{ 
+          sender_id: currentProfile.id, 
+          receiver_id: activeFriendId, 
+          content: JSON.stringify({ msgId: activeReactionMsgId, emoji: emoji }), 
+          image_url: 'system_reaction' 
+        }]);
         activeReactionMsgId = null;
       }
     }
@@ -768,7 +837,8 @@
         let currentTime = new Date().getTime();
         let tapLength = currentTime - lastTap;
         if (tapLength < 300 && tapLength > 0) { 
-          mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msg.id);
+          activeReactionMsgId = msg.id;
+          submitReaction('❤️');
           e.preventDefault(); 
         }
         lastTap = currentTime;
@@ -777,7 +847,10 @@
       wrap.addEventListener('mousedown', startPress);
       wrap.addEventListener('mouseup', () => clearTimeout(pressTimer));
       wrap.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-      wrap.ondblclick = () => mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msg.id);
+      wrap.ondblclick = () => {
+        activeReactionMsgId = msg.id;
+        submitReaction('❤️');
+      }
 
       let contentHTML = msg.is_sticker ? `<div class="msg-bubble msg-sticker">${msg.content}</div>` : 
                         (msg.image_url ? `<img class="msg-img" src="${msg.image_url}" onclick="window.open('${msg.image_url}')">` : 
@@ -791,26 +864,30 @@
     }
 
     function subscribeToChanges() {
-      mySupabaseClient.channel('public:messages').on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
-          if(payload.eventType === 'INSERT') {
-            const m = payload.new;
-            if (m.receiver_id === currentProfile.id) {
+      mySupabaseClient.channel('public:messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+          const m = payload.new;
+          
+          if (m.receiver_id === currentProfile.id) {
+            if (m.image_url === 'system_reaction') {
+              const action = JSON.parse(m.content);
+              updateLocalReaction(action.msgId, m.sender_id, action.emoji);
+              if (activeFriendId === m.sender_id) {
+                const el = document.getElementById(`msg-${action.msgId}`);
+                if(el) {
+                  let badge = el.querySelector('.reaction-badge');
+                  if(!badge) { badge = document.createElement('div'); badge.className = 'reaction-badge'; el.appendChild(badge); }
+                  badge.textContent = action.emoji;
+                }
+              }
+            } else {
+              saveMessageLocal(m, m.sender_id);
               if (activeFriendId === m.sender_id) renderMessage(m);
               else {
                 const sender = friendsList.find(f => f.id === m.sender_id);
                 showAppNotification(`Tin nhắn từ ${sender ? sender.username : "Bạn bè"}`, m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content));
               }
-            } else if (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId) renderMessage(m);
-          } else if (payload.eventType === 'UPDATE') {
-            const m = payload.new;
-            if(activeFriendId) {
-              const el = document.getElementById(`msg-${m.id}`);
-              if(el && m.reaction) {
-                let badge = el.querySelector('.reaction-badge');
-                if(!badge) { badge = document.createElement('div'); badge.className = 'reaction-badge'; el.appendChild(badge); }
-                badge.textContent = m.reaction;
-              }
             }
+            mySupabaseClient.from('messages').delete().eq('id', m.id);
           }
         }).subscribe();
     }
