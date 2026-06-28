@@ -45,7 +45,7 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Nunito', sans-serif; }
     
-    html { font-size: 16px; transition: font-size 0.3s ease; } /* Để thay đổi cỡ chữ */
+    html { font-size: 16px; transition: font-size 0.3s ease; } 
     
     body { 
       background-color: var(--bg-body-1); 
@@ -110,7 +110,7 @@
     .btn-ok { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
     .btn-cancel { background: var(--white); color: var(--text-light); border: 1px solid var(--glass-border); }
 
-    /* --- BẢNG CHỌN REACTION IN-APP CHUYÊN NGHIỆP --- */
+    /* BẢNG CHỌN REACTION IN-APP */
     #reaction-overlay { z-index: 100001; }
     .reaction-box {
       background: var(--bg-glass-heavy);
@@ -419,7 +419,7 @@
   </div>
 
   <script>
-    // --- NGÔN NGỮ & CÀI ĐẶT (SETTINGS LOGIC) ---
+    // --- NGÔN NGỮ & CÀI ĐẶT ---
     const i18n = {
       vi: {
         nav_chats: "Đoạn chat 💬", nav_chats_bot: "Tin nhắn", nav_account: "Hồ sơ 👤", nav_settings: "Cài đặt ⚙️", nav_settings_bot: "Cài đặt",
@@ -442,14 +442,11 @@
       const fontSize = localStorage.getItem('boba_fontsize') || '16px';
       const lang = localStorage.getItem('boba_lang') || 'vi';
 
-      // Áp dụng Giao diện tối/sáng
       if(theme === 'dark') document.body.classList.add('dark-mode');
       else document.body.classList.remove('dark-mode');
 
-      // Áp dụng Cỡ chữ
       document.documentElement.style.fontSize = fontSize;
 
-      // Đồng bộ các thanh chọn trong Tab Cài đặt
       const elTheme = document.getElementById('setting-theme');
       const elFont = document.getElementById('setting-fontsize');
       const elLang = document.getElementById('setting-language');
@@ -457,23 +454,44 @@
       if(elFont) elFont.value = fontSize;
       if(elLang) elLang.value = lang;
 
-      // Áp dụng ngôn ngữ
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if(i18n[lang] && i18n[lang][key]) el.innerHTML = i18n[lang][key];
       });
     }
 
-    function updateSettings() {
-      localStorage.setItem('boba_theme', document.getElementById('setting-theme').value);
-      localStorage.setItem('boba_fontsize', document.getElementById('setting-fontsize').value);
-      localStorage.setItem('boba_lang', document.getElementById('setting-language').value);
+    // --- CẤU HÌNH SUPABASE ---
+    const supabaseUrl = 'https://pkkbimyhlruwdlsrgcvy.supabase.co';
+    const supabaseSecretKey = 'sb_publishable_gYFKPW27BdH7LcsGq4flCQ_5bHG2dF3'; 
+    const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
+
+    let currentUser = null; let currentProfile = null; let activeFriendId = null; 
+    let isRegisterMode = false; let friendsList = [];
+
+    // HÀM LƯU CÀI ĐẶT VÀO DATABASE BÊN CẠNH LOCAL STORAGE
+    async function updateSettings() {
+      const theme = document.getElementById('setting-theme').value;
+      const fontSize = document.getElementById('setting-fontsize').value;
+      const lang = document.getElementById('setting-language').value;
+
+      // 1. Lưu Local & Áp dụng ngay lập tức cho mượt
+      localStorage.setItem('boba_theme', theme);
+      localStorage.setItem('boba_fontsize', fontSize);
+      localStorage.setItem('boba_lang', lang);
       applySettings();
+
+      // 2. Đẩy lên Supabase nếu đã đăng nhập
+      if (currentUser) {
+        await mySupabaseClient.from('profiles').update({
+          theme: theme,
+          font_size: fontSize,
+          language: lang
+        }).eq('id', currentUser.id);
+      }
     }
     
-    applySettings(); // Chạy ngay khi mở app
+    applySettings(); // Chạy ngay khi mở webapp lần đầu
 
-    // --- NỀN BOBA ---
     function createBobas() {
       const bg = document.getElementById('boba-bg');
       bg.innerHTML = ''; 
@@ -519,14 +537,6 @@
       });
     }
 
-    // --- CẤU HÌNH SUPABASE ---
-    const supabaseUrl = 'https://pkkbimyhlruwdlsrgcvy.supabase.co';
-    const supabaseSecretKey = 'sb_publishable_gYFKPW27BdH7LcsGq4flCQ_5bHG2dF3'; 
-    const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
-
-    let currentUser = null; let currentProfile = null; let activeFriendId = null; 
-    let isRegisterMode = false; let friendsList = [];
-
     function getAvatarUrl(seed) { return `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=FAEDCD`; }
 
     const idBoxes = document.querySelectorAll('.id-box');
@@ -570,7 +580,12 @@
         const { data, error } = await mySupabaseClient.auth.signUp({ email, password: pass });
         if (error) { await showAppModal("Lỗi", error.message); return; }
         
-        const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ id: data.user.id, username, tag: customId, email }]);
+        const { error: profileError } = await mySupabaseClient.from('profiles').insert([{ 
+          id: data.user.id, username, tag: customId, email,
+          theme: localStorage.getItem('boba_theme') || 'light',
+          font_size: localStorage.getItem('boba_fontsize') || '16px',
+          language: localStorage.getItem('boba_lang') || 'vi'
+        }]);
         if (profileError) { await showAppModal("Lỗi tạo hồ sơ", "Lỗi: " + profileError.message); return; }
 
         currentUser = data.user; await loadApp();
@@ -580,6 +595,13 @@
     async function loadApp() {
       const { data } = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
       currentProfile = data;
+
+      // ĐỒNG BỘ TỪ DB XUỐNG MÁY KHÁCH KHI ĐĂNG NHẬP
+      if(data.theme) localStorage.setItem('boba_theme', data.theme);
+      if(data.font_size) localStorage.setItem('boba_fontsize', data.font_size);
+      if(data.language) localStorage.setItem('boba_lang', data.language);
+      applySettings();
+
       document.getElementById('my-name').textContent = data.username;
       document.getElementById('my-tag').textContent = `#${data.tag}`;
       document.getElementById('my-avatar').src = getAvatarUrl(data.username + data.tag);
@@ -704,7 +726,7 @@
       await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: imgUrl }]);
     }
 
-    // --- REACTION LOGIC (LONG PRESS & DOUBLE TAP) ---
+    // --- REACTION LOGIC ---
     let activeReactionMsgId = null;
 
     function showReactionPicker(msgId) {
@@ -731,7 +753,6 @@
       wrap.className = `msg-wrapper ${isMe ? 'sent' : 'received'}`;
       wrap.id = `msg-${msg.id}`;
 
-      // Logic Nhấn giữ (Long press) & Nhấn Đúp (Double Tap)
       let pressTimer; let isDragging = false; let lastTap = 0;
 
       const startPress = () => {
@@ -746,13 +767,13 @@
         if (isDragging) return;
         let currentTime = new Date().getTime();
         let tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0) { // DOUBLE TAP = THẢ TIM NHANH
+        if (tapLength < 300 && tapLength > 0) { 
           mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msg.id);
           e.preventDefault(); 
         }
         lastTap = currentTime;
       });
-      // Chuột trên PC
+      
       wrap.addEventListener('mousedown', startPress);
       wrap.addEventListener('mouseup', () => clearTimeout(pressTimer));
       wrap.addEventListener('mouseleave', () => clearTimeout(pressTimer));
