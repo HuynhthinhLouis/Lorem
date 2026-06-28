@@ -164,6 +164,9 @@
     .header-bar { padding: 20px; background: var(--bg-glass-heavy); backdrop-filter: blur(10px); border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; padding-top: max(20px, env(safe-area-inset-top));}
     .header-title { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
     
+    /* Rank Badge CSS */
+    .rank-badge { font-size: 0.75rem; color: white; padding: 3px 8px; border-radius: 12px; font-weight: 800; margin-left: 8px; vertical-align: middle; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
     /* Tabs & Nav */
     .tab-content { flex: 1; overflow-y: auto; padding-bottom: 90px; }
     .tab-pane { display: none; flex-direction: column; }
@@ -180,7 +183,7 @@
     .friend-item:active { transform: scale(0.97); }
     .avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--white); background: var(--secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.1);}
     .friend-info { margin-left: 15px; flex: 1; overflow: hidden; }
-    .friend-name { font-weight: 800; font-size: 1.1rem; display: flex; align-items: baseline; justify-content: space-between;}
+    .friend-name { font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between;}
     .friend-tag { font-size: 0.8rem; color: var(--primary); background: var(--bg-glass-heavy); padding: 2px 8px; border-radius: 8px; font-weight: bold;}
     .last-msg { font-size: 0.9rem; color: var(--text-light); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
     
@@ -194,7 +197,7 @@
     /* Profile Tab */
     .profile-header { display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background: var(--bg-glass-heavy); backdrop-filter: blur(10px); border-bottom: 1px solid var(--glass-border); margin-bottom: 15px; border-radius: 0 0 30px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.02);}
     .profile-avatar { width: 95px; height: 95px; border-radius: 50%; border: 4px solid var(--white); margin-bottom: 12px; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3);}
-    .profile-name { font-size: 1.6rem; font-weight: 800; }
+    .profile-name { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
     .add-friend-card { background: var(--bg-glass-heavy); backdrop-filter: blur(8px); margin: 15px; padding: 20px; border-radius: 20px; border: 1px solid var(--glass-border); box-shadow: 0 4px 15px rgba(0,0,0,0.03);}
     .add-friend-box { display: flex; gap: 10px; margin-top: 12px; }
     .add-friend-box input { flex: 1; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--white); padding: 12px 15px; outline: none; font-weight: 600; color: var(--text-main);}
@@ -317,7 +320,10 @@
         <div class="tab-content">
           <div class="profile-header">
             <img id="my-avatar" class="profile-avatar" src="" alt="Avatar">
-            <div class="profile-name" id="my-name">Name</div>
+            <div class="profile-name">
+              <span id="my-name">Name</span>
+              <span id="my-rank" class="rank-badge" style="display:none;"></span>
+            </div>
             <div style="color: var(--primary); font-weight: 800; background: var(--bg-glass-heavy); padding: 4px 14px; border-radius: 12px; margin-top: 8px; border: 1px solid var(--glass-border);" id="my-tag">#0000</div>
           </div>
 
@@ -387,7 +393,10 @@
       <div class="chat-room-header">
         <button class="back-btn" onclick="closeChat()">❮</button>
         <img id="chat-room-avatar" class="avatar" style="width: 46px; height: 46px;" src="">
-        <div class="friend-name" style="font-size: 1.25rem;" id="chat-room-name"></div>
+        <div class="friend-name" style="font-size: 1.25rem;">
+          <span id="chat-room-name"></span>
+          <span id="chat-room-rank" class="rank-badge" style="display:none; font-size:0.65rem;"></span>
+        </div>
       </div>
       
       <div class="messages-area" id="messages-area"></div>
@@ -404,7 +413,7 @@
       </div>
 
       <div class="chat-input-area">
-        <button class="icon-btn" onclick="document.getElementById('file-upload').click()">📷</button>
+        <button class="icon-btn" onclick="triggerUpload()">📷</button>
         <input type="file" id="file-upload" accept="image/*;capture=camera" style="display: none;" onchange="uploadImage(event)">
         
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
@@ -465,32 +474,46 @@
     const supabaseSecretKey = 'sb_publishable_gYFKPW27BdH7LcsGq4flCQ_5bHG2dF3'; 
     const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
 
-    let currentUser = null; let currentProfile = null; let activeFriendId = null; 
-    let isRegisterMode = false; let friendsList = [];
+    let currentUser = null; 
+    let currentProfile = null; 
+    let activeFriendId = null; 
+    let isRegisterMode = false; 
+    let friendsList = [];
 
-    // HÀM LƯU CÀI ĐẶT VÀO DATABASE BÊN CẠNH LOCAL STORAGE
+    // BIẾN CHO HỆ THỐNG RANK
+    let currentRank = null; 
+    let appFunctionsList = [];
+
+    // HÀM KIỂM TRA QUYỀN HẠN DỰA VÀO RANK
+    function checkFeatureAccess(featureName) {
+      if(!appFunctionsList || appFunctionsList.length === 0) return true; // Fallback an toàn nếu chưa tạo bảng
+      const funcInfo = appFunctionsList.find(f => f.name === featureName);
+      if(!funcInfo) return true; // Nếu chưa thiết lập chức năng này, mặc định cho phép
+      
+      if(funcInfo.value === 0) return true; // Chức năng miễn phí
+      if(funcInfo.value === 1 && currentRank && currentRank.function === 1) return true; // Đủ quyền hạn
+      
+      return false; // Bị chặn
+    }
+
     async function updateSettings() {
       const theme = document.getElementById('setting-theme').value;
       const fontSize = document.getElementById('setting-fontsize').value;
       const lang = document.getElementById('setting-language').value;
 
-      // 1. Lưu Local & Áp dụng ngay lập tức cho mượt
       localStorage.setItem('boba_theme', theme);
       localStorage.setItem('boba_fontsize', fontSize);
       localStorage.setItem('boba_lang', lang);
       applySettings();
 
-      // 2. Đẩy lên Supabase nếu đã đăng nhập
       if (currentUser) {
         await mySupabaseClient.from('profiles').update({
-          theme: theme,
-          font_size: fontSize,
-          language: lang
+          theme: theme, font_size: fontSize, language: lang
         }).eq('id', currentUser.id);
       }
     }
     
-    applySettings(); // Chạy ngay khi mở webapp lần đầu
+    applySettings();
 
     function createBobas() {
       const bg = document.getElementById('boba-bg');
@@ -593,18 +616,43 @@
     }
 
     async function loadApp() {
-      const { data } = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-      currentProfile = data;
+      // THÊM: Truy vấn an toàn kết hợp lấy thông tin RANK của người dùng hiện tại
+      let response = await mySupabaseClient.from('profiles').select('*, ranks(name, color, function)').eq('id', currentUser.id).single();
+      
+      // Fallback nếu người dùng chưa tạo các bảng SQL mới
+      if (response.error) {
+        response = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+      }
+      
+      currentProfile = response.data;
+      if(currentProfile.ranks) currentRank = currentProfile.ranks;
 
-      // ĐỒNG BỘ TỪ DB XUỐNG MÁY KHÁCH KHI ĐĂNG NHẬP
-      if(data.theme) localStorage.setItem('boba_theme', data.theme);
-      if(data.font_size) localStorage.setItem('boba_fontsize', data.font_size);
-      if(data.language) localStorage.setItem('boba_lang', data.language);
+      // THÊM: Lấy danh sách các chức năng (app_functions)
+      const funcRes = await mySupabaseClient.from('app_functions').select('*');
+      if(!funcRes.error && funcRes.data) appFunctionsList = funcRes.data;
+
+      // Đồng bộ cài đặt
+      if(currentProfile.theme) localStorage.setItem('boba_theme', currentProfile.theme);
+      if(currentProfile.font_size) localStorage.setItem('boba_fontsize', currentProfile.font_size);
+      if(currentProfile.language) localStorage.setItem('boba_lang', currentProfile.language);
       applySettings();
 
-      document.getElementById('my-name').textContent = data.username;
-      document.getElementById('my-tag').textContent = `#${data.tag}`;
-      document.getElementById('my-avatar').src = getAvatarUrl(data.username + data.tag);
+      // UI hiển thị Profile
+      document.getElementById('my-name').textContent = currentProfile.username;
+      
+      // Hiển thị Badge Rank
+      const rankBadge = document.getElementById('my-rank');
+      if (currentRank) {
+        rankBadge.style.display = 'inline-block';
+        rankBadge.style.background = currentRank.color;
+        rankBadge.textContent = currentRank.name;
+        document.getElementById('my-name').style.color = currentRank.color;
+      } else {
+        rankBadge.style.display = 'none';
+      }
+
+      document.getElementById('my-tag').textContent = `#${currentProfile.tag}`;
+      document.getElementById('my-avatar').src = getAvatarUrl(currentProfile.username + currentProfile.tag);
       document.getElementById('auth-screen').classList.remove('active');
       document.getElementById('main-screen').classList.add('active');
       await loadFriendsData();
@@ -635,17 +683,28 @@
       for (let rel of relations) {
         const isSender = rel.sender_id === currentProfile.id;
         const friendId = isSender ? rel.receiver_id : rel.sender_id;
-        const { data: fProfile } = await mySupabaseClient.from('profiles').select('*').eq('id', friendId).single();
+        
+        // Truy vấn an toàn kết hợp rank của bạn bè
+        let resFriend = await mySupabaseClient.from('profiles').select('*, ranks(name, color)').eq('id', friendId).single();
+        if(resFriend.error) resFriend = await mySupabaseClient.from('profiles').select('*').eq('id', friendId).single();
+        
+        const fProfile = resFriend.data;
         if(!fProfile) continue;
 
         const avatar = getAvatarUrl(fProfile.username + fProfile.tag);
+        
+        let rankHtml = ''; let friendColor = 'inherit';
+        if (fProfile.ranks) {
+          friendColor = fProfile.ranks.color;
+          rankHtml = `<span class="rank-badge" style="background: ${fProfile.ranks.color}">${fProfile.ranks.name}</span>`;
+        }
 
         if (rel.status === 'pending' && !isSender) {
           reqList.innerHTML += `
             <div class="friend-item">
               <img class="avatar" src="${avatar}">
               <div class="friend-info">
-                <div class="friend-name">${fProfile.username} <span class="friend-tag">#${fProfile.tag}</span></div>
+                <div class="friend-name" style="color:${friendColor}">${fProfile.username} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div>
                 <div class="request-btn-group">
                   <button class="btn-accept" onclick="respondRequest('${rel.id}', 'accepted')">✔</button>
                   <button class="btn-reject" onclick="respondRequest('${rel.id}', 'rejected')">✖</button>
@@ -654,7 +713,13 @@
             </div>`;
         } else if (rel.status === 'accepted') {
           friendsList.push(fProfile);
-          accList.innerHTML += `<div class="friend-item"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name">${fProfile.username} <span class="friend-tag">#${fProfile.tag}</span></div></div></div>`;
+          accList.innerHTML += `
+            <div class="friend-item">
+              <img class="avatar" src="${avatar}">
+              <div class="friend-info">
+                <div class="friend-name" style="color:${friendColor}">${fProfile.username} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div>
+              </div>
+            </div>`;
             
           const { data: lastMsg } = await mySupabaseClient.from('messages').select('content, is_sticker, image_url').or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fProfile.id}),and(sender_id.eq.${fProfile.id},receiver_id.eq.${currentProfile.id})`).order('created_at', { ascending: false }).limit(1);
           let text = lang === 'en' ? 'Tap to chat...' : 'Bấm để chat nè...';
@@ -664,7 +729,14 @@
             else text = lastMsg[0].content;
           }
 
-          chatList.innerHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}')"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name">${fProfile.username}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
+          chatList.innerHTML += `
+            <div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}', '${friendColor}', '${fProfile.ranks ? fProfile.ranks.name : ''}')">
+              <img class="avatar" src="${avatar}">
+              <div class="friend-info">
+                <div class="friend-name" style="color:${friendColor}">${fProfile.username} ${rankHtml}</div>
+                <div class="last-msg" id="last-msg-${fProfile.id}">${text}</div>
+              </div>
+            </div>`;
         }
       }
       
@@ -690,10 +762,21 @@
       loadFriendsData();
     }
 
-    async function openChat(fid, name, tag) {
+    async function openChat(fid, name, tag, rankColor, rankName) {
       activeFriendId = fid;
       document.getElementById('chat-room-name').textContent = name;
+      document.getElementById('chat-room-name').style.color = rankColor !== 'inherit' ? rankColor : 'var(--primary)';
       document.getElementById('chat-room-avatar').src = getAvatarUrl(name+tag);
+      
+      const badge = document.getElementById('chat-room-rank');
+      if (rankName && rankName !== 'undefined') {
+        badge.style.display = 'inline-block';
+        badge.style.background = rankColor;
+        badge.textContent = rankName;
+      } else {
+        badge.style.display = 'none';
+      }
+
       document.getElementById('chat-room').classList.add('active');
       document.getElementById('sticker-panel').classList.remove('active');
       const area = document.getElementById('messages-area'); area.innerHTML = '';
@@ -704,7 +787,25 @@
     }
     
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
-    function toggleStickers() { document.getElementById('sticker-panel').classList.toggle('active'); }
+    
+    // TÍCH HỢP QUYỀN VÀO STICKER & CAMERA
+    function toggleStickers() { 
+      if (!checkFeatureAccess('Gửi Sticker')) {
+        const lang = localStorage.getItem('boba_lang');
+        showAppModal("Chức năng đặc quyền", lang === 'en' ? "Your Rank cannot send Stickers!" : "Hạng tài khoản của bạn chưa đủ để gửi Sticker!");
+        return;
+      }
+      document.getElementById('sticker-panel').classList.toggle('active'); 
+    }
+
+    function triggerUpload() {
+      if (!checkFeatureAccess('Gửi hình ảnh')) {
+        const lang = localStorage.getItem('boba_lang');
+        showAppModal("Chức năng đặc quyền", lang === 'en' ? "Your Rank cannot upload Images!" : "Hạng tài khoản của bạn chưa đủ để gửi Hình ảnh!");
+        return;
+      }
+      document.getElementById('file-upload').click();
+    }
 
     document.getElementById('chat-form').addEventListener('submit', async (e) => {
       e.preventDefault(); const input = document.getElementById('message-input'); const text = input.value.trim();
@@ -712,7 +813,7 @@
     });
 
     async function sendSticker(emoji) {
-      toggleStickers();
+      document.getElementById('sticker-panel').classList.remove('active');
       if(activeFriendId) await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: emoji, is_sticker: true }]);
     }
 
