@@ -563,7 +563,6 @@
     const acceptedExperimentalFeatures = [];
     let replyingMessageId = null;
 
-    // --- FIX LỖI Ở ĐÂY: Đã thêm dấu `};` đóng block dữ liệu sticker ---
     const stickerData = {
       "Mèo Ami": [
         "https://i.imgur.com/npjt5Fu.gif",
@@ -647,7 +646,6 @@
       if(!activeFriendId) return;
       const currentNick = localStorage.getItem(getNicknameKey(activeFriendId)) || "";
       
-      // Gọi giao diện In-app thay vì prompt
       openInputModal("Đặt biệt danh", "Nhập tên mới cho người bạn này (để trống nếu muốn xóa biệt danh):", currentNick, (newNick) => {
         if(newNick.trim() === "") {
           localStorage.removeItem(getNicknameKey(activeFriendId));
@@ -728,7 +726,7 @@
       }
   
       if (!isRegisterMode) {
-    // ---- XỬ LÝ ĐĂNG NHẬP ----
+        // ĐĂNG NHẬP
         const { data, error } = await mySupabaseClient.auth.signInWithPassword({ email: email, password: pass });
         if (error) { 
           await showAppModal("Lỗi rồi", "Sai mật khẩu hoặc email òi!"); 
@@ -737,7 +735,7 @@
         currentUser = data.user; 
         await loadApp();
       } else {
-    // ---- XỬ LÝ ĐĂNG KÝ ----
+        // ĐĂNG KÝ
         const username = document.getElementById('username').value.trim(); 
         const customId = getCustomId();
     
@@ -746,46 +744,52 @@
           return; 
         }
     
-    // 1. Tạo tài khoản trên hệ thống Auth
+        // 1. Tạo tài khoản trên hệ thống Auth
         const { data, error } = await mySupabaseClient.auth.signUp({
-        email: email,
-        password: pass,
-        options: {
-          data: { username: username } // Truyền tên vào user_metadata
-        }
-      });
-    
-    // 2. Đẩy dữ liệu vào bảng profiles (Có bắt lỗi)
-          const { error: profileError } = await mySupabaseClient
-          .from('profiles')
-          .insert([{ 
-            id: data.user.id, 
-            username: username, 
-            tag: customId, 
-            email: email, 
-            theme: 'light', 
-            font_size: '16px', 
-            language: 'vi' 
-          }]);
+          email: email,
+          password: pass,
+          options: {
+            data: { username: username }
+          }
+        });
 
-    // Nếu bảng profiles từ chối (thường do RLS), nó sẽ báo lỗi ở đây
-        if (profileError) {
-          console.error("LỖI SUPABASE:", profileError);
-          await showAppModal("Lỗi tạo Profile", "Tài khoản đã được tạo nhưng database chặn không cho lưu thông tin (Lỗi RLS). Xem F12 (Console) nhé!");
+        if (error) {
+          await showAppModal("Lỗi đăng ký", error.message);
           return;
         }
 
-        currentUser = data.user; 
-        await loadApp();
+        // BƯỚC FIX QUAN TRỌNG: Kiểm tra xem user có phải xác nhận email không
+        if (data.user && !data.session) {
+          await showAppModal("Thành công!", "Tài khoản của bạn đã được tạo! Vui lòng kiểm tra hộp thư Email để xác nhận tài khoản trước khi đăng nhập nhé.");
+          toggleAuthMode(false); // Chuyển về màn hình đăng nhập
+          return;
+        }
+
+        // Nếu có session luôn (đã tắt xác nhận Email trên Supabase)
+        if (data.session) {
+            // Đợi 500ms cho Trigger Database tạo profile tự động chạy xong
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Xóa bỏ lệnh insert profiles thủ công để tránh xung đột với DB Trigger.
+            currentUser = data.user; 
+            await loadApp();
+        }
       }
     }
 
     async function loadApp() {
       let response = await mySupabaseClient.from('profiles').select('*, ranks(name, color, function)').eq('id', currentUser.id).single();
+      
+      // Nếu truy vấn có ranks bị lỗi (vì user mới chưa có hạng), fallback gọi profiles thông thường
       if (response.error) response = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
       
       currentProfile = response.data; 
-      if (!currentProfile) { await showAppModal("Lỗi dữ liệu", "Không thể tải thông tin hồ sơ của bạn. Hãy thử đăng nhập lại nhé!"); return; }
+      
+      if (!currentProfile) { 
+        await showAppModal("Chờ chút!", "Dữ liệu hồ sơ của bạn đang được tạo. Hãy nhấn Đăng nhập lại 1 lần nữa nhé!"); 
+        await mySupabaseClient.auth.signOut();
+        return; 
+      }
       
       if(currentProfile.ranks) currentRank = currentProfile.ranks;
       const funcRes = await mySupabaseClient.from('app_functions').select('*');
@@ -801,8 +805,11 @@
         document.getElementById('my-name').style.color = currentRank.color;
       } else { rankBadge.style.display = 'none'; }
 
-      document.getElementById('my-tag').textContent = `#${currentProfile.tag}`;
-      document.getElementById('my-avatar').src = getAvatarUrl(currentProfile.username + currentProfile.tag);
+      // Fix hiển thị TAG (Trường hợp DB chưa kịp lưu, hiển thị tag mặc định)
+      let displayTag = currentProfile.tag ? currentProfile.tag : '0000';
+      document.getElementById('my-tag').textContent = `#${displayTag}`;
+      document.getElementById('my-avatar').src = getAvatarUrl(currentProfile.username + displayTag);
+      
       document.getElementById('auth-screen').classList.remove('active');
       document.getElementById('main-screen').classList.add('active');
       
@@ -893,10 +900,10 @@
 
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
     
-    // GỠ BỎ YÊU CẦU KIỂM TRA HẠNG CHO NÚT BẤM (Mở sticker & Gửi ảnh chạy mượt)
     function toggleStickers() { 
       document.getElementById('sticker-panel').classList.toggle('active');
     }
+    
     function triggerUpload() {
       document.getElementById('file-upload').click();
     }
