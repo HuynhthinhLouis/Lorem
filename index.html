@@ -468,29 +468,6 @@
     let currentUser = null; let currentProfile = null; let activeFriendId = null; 
     let isRegisterMode = false; let friendsList = [];
 
-    // --- QUẢN LÝ LOCAL STORAGE & ĐỒNG BỘ ---
-    function getLocalMessages(fid) {
-      const data = localStorage.getItem(`boba_chat_${currentProfile.id}_${fid}`);
-      return data ? JSON.parse(data) : [];
-    }
-
-    function saveMessageLocal(msg, fid) {
-      const msgs = getLocalMessages(fid);
-      if (!msgs.find(m => m.id === msg.id)) {
-        msgs.push(msg);
-        localStorage.setItem(`boba_chat_${currentProfile.id}_${fid}`, JSON.stringify(msgs));
-      }
-    }
-
-    function updateLocalReaction(msgId, fid, emoji) {
-      const msgs = getLocalMessages(fid);
-      const m = msgs.find(m => m.id === msgId);
-      if (m) {
-        m.reaction = emoji;
-        localStorage.setItem(`boba_chat_${currentProfile.id}_${fid}`, JSON.stringify(msgs));
-      }
-    }
-
     async function syncPendingMessages() {
       const { data } = await mySupabaseClient.from('messages').select('*').eq('receiver_id', currentProfile.id);
       if (data && data.length > 0) {
@@ -499,7 +476,6 @@
             const payload = JSON.parse(m.content);
             updateLocalReaction(payload.msgId, m.sender_id, payload.emoji);
           } else {
-            saveMessageLocal(m, m.sender_id);
           }
           await mySupabaseClient.from('messages').delete().eq('id', m.id);
         }
@@ -740,17 +716,39 @@
       loadFriendsData();
     }
 
-    async function openChat(fid, name, tag) {
-      activeFriendId = fid;
-      document.getElementById('chat-room-name').textContent = name;
-      document.getElementById('chat-room-avatar').src = getAvatarUrl(name+tag);
+    function openChat(friend) {
+      activeFriendId = friend.id;
+      // Cập nhật tên theo ngôn ngữ nếu cần
       document.getElementById('chat-room').classList.add('active');
-      document.getElementById('sticker-panel').classList.remove('active');
+      loadChatHistory(friend.id); // Gọi hàm tải từ DB
+    }
+
+    async function loadChatHistory(friendId) {
+      const area = document.getElementById('messages-area'); // Đảm bảo ID này khớp với file HTML của bạn
+      area.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-light);">Đang tải tin nhắn...</div>';
+
+      // Kéo toàn bộ tin nhắn giữa bạn và người kia từ Supabase
+      const { data, error } = await mySupabaseClient
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentProfile.id})`)
+        .order('created_at', { ascending: true });
+
+      area.innerHTML = ''; 
+
+      if (error) {
+        console.error("Lỗi lấy lịch sử tin nhắn:", error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        data.forEach(m => renderMessage(m));
+      } else {
+        const emptyText = lang === 'en' ? 'No messages yet 🧋' : 'Chưa có tin nhắn nào 🧋';
+        area.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-light); font-size:0.9rem;">${emptyText}</div>`;
+      }
       
-      const area = document.getElementById('messages-area'); area.innerHTML = '';
-      const msgs = getLocalMessages(fid);
-      msgs.forEach(m => renderMessage(m));
-      setTimeout(() => area.scrollTo(0, area.scrollHeight), 150);
+      area.scrollTop = area.scrollHeight;
     }
     
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
@@ -773,7 +771,6 @@
       if(activeFriendId) {
         const { data } = await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: emoji, is_sticker: true }]).select();
         if (data && data.length > 0) {
-          saveMessageLocal(data[0], activeFriendId);
           renderMessage(data[0]);
         }
       }
@@ -789,7 +786,6 @@
       
       const { data } = await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: imgUrl }]).select();
       if (data && data.length > 0) {
-          saveMessageLocal(data[0], activeFriendId);
           renderMessage(data[0]);
       }
     }
@@ -881,9 +877,9 @@
           const m = payload.new;
           
           if (m.receiver_id === currentProfile.id) {
+            // Xử lý Reaction (Thả cảm xúc)
             if (m.image_url === 'system_reaction') {
               const action = JSON.parse(m.content);
-              updateLocalReaction(action.msgId, m.sender_id, action.emoji);
               if (activeFriendId === m.sender_id) {
                 const el = document.getElementById(`msg-${action.msgId}`);
                 if(el) {
@@ -892,26 +888,25 @@
                   badge.textContent = action.emoji;
                 }
               }
-            } else {
-              saveMessageLocal(m, m.sender_id);
+            } 
+            // Xử lý Tin nhắn gửi tới
+            else {
               if (activeFriendId === m.sender_id) {
                 renderMessage(m);
               } else {
-                // XỬ LÝ KHI NGƯỜI DÙNG KHÔNG MỞ KHUNG CHAT ĐÓ
+                // Đẩy Push Notification Android nếu không mở khung chat
                 const sender = friendsList.find(f => f.id === m.sender_id);
                 const title = `Tin nhắn từ ${sender ? sender.username : "Bạn bè"}`;
                 const body = m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content);
                 
-                // 1. Hiện thông báo pop-up trên Web
                 showAppNotification(title, body);
 
-                // 2. GỌI SANG APP ANDROID ĐỂ ĐẨY PUSH NOTIFICATION NATIVE
                 if (window.AndroidBridge && typeof window.AndroidBridge.showNativeNotification === 'function') {
                     window.AndroidBridge.showNativeNotification(title, body);
                 }
               }
             }
-            mySupabaseClient.from('messages').delete().eq('id', m.id);
+            // CHÚ Ý: ĐÃ XÓA LỆNH DELETE Ở ĐÂY ĐỂ GIỮ LỊCH SỬ CHAT TRÊN DB
           }
         }).subscribe();
     }
