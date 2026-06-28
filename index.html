@@ -31,12 +31,33 @@
       overflow: hidden;
     }
 
-    /* Hiệu ứng Background rơi rơi dễ thương */
+    /* Hiệu ứng Background ngẫu nhiên & mờ mờ */
     .boba-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
-    .floating-icon { position: absolute; top: -50px; font-size: 1.5rem; animation: fall linear infinite; opacity: 0.6; }
-    @keyframes fall {
-      to { transform: translateY(110vh) rotate(360deg); }
+    .boba-icon-blur {
+      position: absolute; opacity: 0.15; filter: blur(2px);
+      animation: floatSlow linear infinite alternate;
     }
+    @keyframes floatSlow {
+      from { transform: translateY(0px) rotate(0deg); }
+      to { transform: translateY(-20px) rotate(10deg); }
+    }
+
+    /* In-app Toast Notifications */
+    #notification-container {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 9999; width: 90%; max-width: 400px; pointer-events: none;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .toast {
+      background: rgba(255, 255, 255, 0.95); border-left: 5px solid var(--primary);
+      padding: 12px 20px; border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px;
+      animation: slideDown 0.4s ease forwards; pointer-events: all;
+    }
+    .toast-content { flex: 1; }
+    .toast-title { color: var(--primary); font-weight: 800; font-size: 1rem; margin-bottom: 2px;}
+    .toast-msg { color: var(--text-main); font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;}
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
     .app-container { 
       width: 100%; max-width: 480px; background: var(--bg-color); height: 100vh; 
@@ -125,7 +146,7 @@
     .reaction-badge { position: absolute; bottom: -10px; right: -5px; background: white; border-radius: 50%; padding: 2px 4px; font-size: 0.8rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #EFE4D8; }
     .msg-wrapper.received .reaction-badge { right: auto; left: -5px; }
 
-    /* Input Area (Có thêm nút Camera & Sticker) */
+    /* Input Area */
     .chat-input-area { padding: 10px 15px; background: var(--white); border-top: 1px solid #EFE4D8; display: flex; align-items: center; gap: 8px; padding-bottom: env(safe-area-inset-bottom); position: relative;}
     .icon-btn { background: #FFF4E6; color: var(--primary); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;}
     .chat-input-area input[type="text"] { flex: 1; padding: 12px 15px; border: 2px solid #EFE4D8; border-radius: 24px; outline: none; font-size: 0.95rem; background: var(--bg-color); }
@@ -142,7 +163,11 @@
 </head>
 <body>
   
-  <div class="boba-bg" id="boba-bg"></div> <div class="app-container">
+  <div class="boba-bg" id="boba-bg"></div> 
+  
+  <div id="notification-container"></div>
+
+  <div class="app-container">
     
     <div id="auth-screen" class="screen active auth-panel">
       <div style="text-align: center; margin-bottom: 10px; font-size: 4rem;">🧋</div>
@@ -250,22 +275,48 @@
   </div>
 
   <script>
-    // --- KHỞI TẠO NỀN BOBA DỄ THƯƠNG ---
+    // --- KHỞI TẠO NỀN BOBA NGẪU NHIÊN VÀ MỜ MỜ ---
     function createBobas() {
       const bg = document.getElementById('boba-bg');
+      bg.innerHTML = ''; // Làm sạch nền trước khi tạo mới
       const icons = ['🧋', '🌸', '✨', '🤍', '🍡'];
-      setInterval(() => {
+      // Tạo ra 40 icon ngẫu nhiên trên toàn bộ màn hình
+      for (let i = 0; i < 40; i++) {
         const icon = document.createElement('div');
-        icon.className = 'floating-icon';
+        icon.className = 'boba-icon-blur';
         icon.innerText = icons[Math.floor(Math.random() * icons.length)];
         icon.style.left = Math.random() * 100 + 'vw';
-        icon.style.fontSize = (Math.random() * 1 + 1) + 'rem';
-        icon.style.animationDuration = (Math.random() * 3 + 5) + 's';
+        icon.style.top = Math.random() * 100 + 'vh';
+        icon.style.fontSize = (Math.random() * 1.5 + 1.5) + 'rem';
+        icon.style.animationDuration = (Math.random() * 3 + 3) + 's';
+        icon.style.animationDelay = `-${Math.random() * 2}s`;
         bg.appendChild(icon);
-        setTimeout(() => icon.remove(), 8000);
-      }, 800);
+      }
     }
     createBobas();
+
+    // --- HÀM TẠO THÔNG BÁO TOAST ---
+    function showAppNotification(title, message) {
+      const container = document.getElementById('notification-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <span style="font-size: 1.8rem;">🧋</span>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-msg">${message}</div>
+        </div>
+      `;
+      container.appendChild(toast);
+      
+      // Tự động ẩn đi sau 4 giây
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
 
     // --- CẤU HÌNH SUPABASE ---
     const supabaseUrl = 'https://pkkbimyhlruwdlsrgcvy.supabase.co';
@@ -304,8 +355,6 @@
         ? `Đã có tài khoản? <a href="#" onclick="toggleAuthMode(false)">Đăng nhập</a>` 
         : `Chưa có tài khoản? <a href="#" onclick="toggleAuthMode(true)">Đăng ký ngay</a>`;
     }
-
-    async function hashPassword(p) { return p; } // Simplified for test
 
     async function handleAuth() {
       const email = document.getElementById('contact').value.trim();
@@ -538,17 +587,36 @@
       area.scrollTop = area.scrollHeight;
     }
 
-    // Lắng nghe Real-time Data
+    // Lắng nghe Real-time Data và Kích hoạt Thông Báo
     function subscribeToChanges() {
       // Nghe tin nhắn mới hoặc reaction mới
       mySupabaseClient.channel('public:messages')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
           if(payload.eventType === 'INSERT') {
             const m = payload.new;
-            if((m.sender_id === currentProfile.id && m.receiver_id === activeFriendId) || 
-               (m.receiver_id === currentProfile.id && m.sender_id === activeFriendId)) {
+            
+            if (m.receiver_id === currentProfile.id) {
+              // Nếu người khác gửi cho mình
+              if (activeFriendId === m.sender_id) {
+                // Đang mở đoạn chat với người đó -> render tin nhắn trực tiếp
+                renderMessage(m);
+              } else {
+                // Không mở đoạn chat -> Hiển thị thông báo In-app
+                const sender = friendsList.find(f => f.id === m.sender_id);
+                const senderName = sender ? sender.username : "Ai đó";
+                let msgPreview = m.is_sticker ? '[Sticker]' : (m.image_url ? '[Hình ảnh]' : m.content);
+                
+                showAppNotification(`Tin nhắn từ ${senderName}`, msgPreview);
+                
+                // Cập nhật text preview ngoài danh sách chat
+                const previewEl = document.getElementById(`last-msg-${m.sender_id}`);
+                if(previewEl) previewEl.textContent = msgPreview;
+              }
+            } else if (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId) {
+              // Nếu là mình gửi (để hiển thị trên màn hình của mình)
               renderMessage(m);
             }
+
           } else if (payload.eventType === 'UPDATE') {
             const m = payload.new;
             if(activeFriendId) {
@@ -566,10 +634,13 @@
           }
         }).subscribe();
         
-      // Nghe thay đổi bạn bè (để cập nhật danh sách lời mời)
+      // Nghe thay đổi bạn bè (để cập nhật danh sách lời mời và thông báo)
       mySupabaseClient.channel('public:friends')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, (payload) => {
           loadFriendsData();
+          if(payload.eventType === 'INSERT' && payload.new.receiver_id === currentProfile.id) {
+            showAppNotification("Bạn mới kìa!", "Ai đó vừa gửi lời mời kết bạn cho bạn.");
+          }
         }).subscribe();
     }
   </script>
