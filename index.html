@@ -265,6 +265,13 @@
     .sticker-item-img:hover, .sticker-item-img:active { transform: scale(1.18); }
     @keyframes slideUp { from { opacity: 0; transform: translateY(15px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
+    /* Styling cho Avatar Upload */
+    .avatar-wrapper { position: relative; display: inline-block; cursor: pointer; margin-bottom: 12px; }
+    .avatar-edit-icon { position: absolute; bottom: 5px; right: 0; background: var(--primary); color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 1rem; border: 3px solid var(--bg-glass-heavy); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.2s; }
+    .avatar-wrapper:active .avatar-edit-icon { transform: scale(0.9); }
+
+    .register-avatar-preview { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin: 0 auto; display: block; cursor: pointer; background: var(--white); box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
+
   </style>
 </head>
 <body>
@@ -318,6 +325,11 @@
       <input type="password" id="password" class="input-cute" placeholder="Password">
       
       <div id="register-fields" class="register-fields">
+          <div style="text-align: center; margin-bottom: 5px;">
+          <input type="file" id="register-avatar-upload" accept="image/*" style="display: none;" onchange="previewRegisterAvatar(event)">
+          <img id="register-avatar-img" class="register-avatar-preview" src="https://api.dicebear.com/7.x/adventurer/svg?seed=Boba" onclick="document.getElementById('register-avatar-upload').click()" title="Chọn ảnh đại diện">
+          <p style="font-size: 0.8rem; color: var(--text-light); margin-top: 8px; font-weight: 700;">Nhấn vào để tải ảnh lên (tuỳ chọn)</p>
+        </div>
         <input type="text" id="username" class="input-cute" placeholder="Tên hiển thị (VD: Huy)">
         <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: -10px; font-weight: bold; padding-left: 5px;" data-i18n="auth_enter_id">Nhập ID 4 số của bạn:</p>
         <div class="id-container">
@@ -348,7 +360,11 @@
         </div>
         <div class="tab-content">
           <div class="profile-header">
-            <img id="my-avatar" class="profile-avatar" src="" alt="Avatar">
+            <div class="avatar-wrapper" onclick="document.getElementById('profile-avatar-upload').click()">
+              <img id="my-avatar" class="profile-avatar" style="margin-bottom: 0;" src="" alt="Avatar">
+              <div class="avatar-edit-icon">📷</div>
+            </div>
+            <input type="file" id="profile-avatar-upload" accept="image/*" style="display: none;" onchange="updateProfileAvatar(event)">
             <div class="profile-name">
               <span id="my-name">Name</span>
               <span id="my-rank" class="rank-badge" style="display:none;"></span>
@@ -579,6 +595,52 @@
     let appFunctionsList = [];
     const acceptedExperimentalFeatures = [];
     let replyingMessageId = null;
+    let registerAvatarFile = null;
+
+    // Hàm hiển thị xem trước avatar lúc đăng ký
+    function previewRegisterAvatar(e) {
+      const file = e.target.files[0];
+      if (file) {
+        registerAvatarFile = file;
+        document.getElementById('register-avatar-img').src = URL.createObjectURL(file);
+      }
+    }
+
+    // Hàm đổi avatar trong Tab Hồ sơ
+    async function updateProfileAvatar(e) {
+      const file = e.target.files[0];
+      if (!file || !currentProfile) return;
+  
+      showAppNotification('Đang xử lý...', 'Đang tải ảnh đại diện lên máy chủ');
+  
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avatar_${currentProfile.id}_${Date.now()}.${fileExt}`;
+  
+      // Upload lên bucket 'avatars'
+      const { error: uploadError } = await mySupabaseClient.storage.from('avatars').upload(fileName, file);
+  
+      if (uploadError) {
+        await showAppModal("Lỗi tải ảnh", uploadError.message);
+        return;
+      }
+  
+      const imgUrl = mySupabaseClient.storage.from('avatars').getPublicUrl(fileName).data.publicUrl;
+  
+      // Cập nhật đường dẫn vào database
+      const { error: updateError } = await mySupabaseClient.from('profiles')
+        .update({ avatar_url: imgUrl })
+        .eq('id', currentProfile.id);
+  
+      if (updateError) {
+        await showAppModal("Lỗi cập nhật", updateError.message);
+        return;
+      }
+  
+      currentProfile.avatar_url = imgUrl;
+      document.getElementById('my-avatar').src = imgUrl;
+      showAppNotification('Thành công', 'Đã cập nhật ảnh đại diện mới!');
+      loadFriendsData(); // Cập nhật lại list bạn bè nếu cần
+    }
 
     const stickerData = {
       "Mèo Ami": [
@@ -766,7 +828,24 @@
 
         if (data.session) {
             await new Promise(resolve => setTimeout(resolve, 500));
-            await mySupabaseClient.from('profiles').update({ tag: customId }).eq('id', data.user.id);
+    
+            let customAvatarUrl = null;
+            // Nếu người dùng có chọn ảnh lúc đăng ký thì upload ảnh đó
+            if (registerAvatarFile) {
+                const fileExt = registerAvatarFile.name.split('.').pop();
+                const fileName = `avatar_${data.user.id}_${Date.now()}.${fileExt}`;
+                const { error: uploadError } = await mySupabaseClient.storage.from('avatars').upload(fileName, registerAvatarFile);
+                if (!uploadError) {
+                    customAvatarUrl = mySupabaseClient.storage.from('avatars').getPublicUrl(fileName).data.publicUrl;
+                }
+            }
+
+            // Cập nhật tag ID và url ảnh (nếu có)
+            const updateData = { tag: customId };
+            if (customAvatarUrl) updateData.avatar_url = customAvatarUrl;
+
+            await mySupabaseClient.from('profiles').update(updateData).eq('id', data.user.id);
+    
             currentUser = data.user; 
             await loadApp();
         }
@@ -803,7 +882,7 @@
 
       let displayTag = currentProfile.tag ? currentProfile.tag : '0000';
       document.getElementById('my-tag').textContent = `#${displayTag}`;
-      document.getElementById('my-avatar').src = getAvatarUrl(currentProfile.username + displayTag);
+      document.getElementById('my-avatar').src = currentProfile.avatar_url ? currentProfile.avatar_url : getAvatarUrl(currentProfile.username + displayTag);
       
       document.getElementById('auth-screen').classList.remove('active');
       document.getElementById('main-screen').classList.add('active');
@@ -858,7 +937,7 @@
         if(resFriend.error) resFriend = await mySupabaseClient.from('profiles').select('*').eq('id', friendId).single();
         const fProfile = resFriend.data; if(!fProfile) continue;
 
-        const avatar = getAvatarUrl(fProfile.username + fProfile.tag);
+        const avatar = fProfile.avatar_url ? fProfile.avatar_url : getAvatarUrl(fProfile.username + fProfile.tag);
         const displayName = getFriendDisplayName(fProfile.id, fProfile.username);
 
         let rankHtml = ''; let friendColor = 'inherit';
@@ -875,19 +954,19 @@
           if(lastMsg && lastMsg.length > 0) {
             if(lastMsg[0].is_sticker) text = '[Sticker]'; else if(lastMsg[0].image_url) text = lang === 'en' ? '[Image]' : '[Hình ảnh]'; else text = lastMsg[0].content;
           }
-          chatList.innerHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}', '${friendColor}', '${fProfile.ranks ? fProfile.ranks.name : ''}')"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
+          chatList.innerHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}', '${friendColor}', '${fProfile.ranks ? fProfile.ranks.name : ''}', '${fProfile.avatar_url || ''}')"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
         }
       }
       if(reqList.innerHTML === '') reqList.innerHTML = `<div class="empty-state">${lang==='en'?'No requests':'Không có lời mời nào'}</div>`;
       if(accList.innerHTML === '') accList.innerHTML = `<div class="empty-state">${lang==='en'?'No friends yet':'Chưa có bạn bè'}</div>`;
     }
 
-    async function openChat(fid, name, tag, rankColor, rankName) {
+    async function openChat(fid, name, tag, rankColor, rankName, customAvatarUrl) {
       activeFriendId = fid;
       const finalName = getFriendDisplayName(fid, name);
       document.getElementById('chat-room-name').textContent = finalName;
       document.getElementById('chat-room-name').style.color = rankColor !== 'inherit' ? rankColor : 'var(--primary)';
-      document.getElementById('chat-room-avatar').src = getAvatarUrl(name+tag);
+      document.getElementById('chat-room-avatar').src = customAvatarUrl ? customAvatarUrl : getAvatarUrl(name+tag);
       cancelReplyMode();
 
       const badge = document.getElementById('chat-room-rank');
