@@ -287,7 +287,7 @@
   <div id="input-modal" class="modal-overlay">
     <div class="modal-box">
       <h3 id="input-modal-title" class="modal-title">Đặt biệt danh</h3>
-      <p id="input-modal-msg" class="modal-msg" style="margin-bottom: 10px; font-size: 0.9rem;"></p>
+      <p id="input-modal-msg" class="modal-msg" style="margin-bottom: 10px; font-size: 0.9rem"></p>
       <input type="text" id="input-modal-field" class="input-cute" style="width: 100%; margin-bottom: 20px; text-align: center;" placeholder="Nhập tên mới...">
       <div class="modal-buttons">
         <button class="modal-btn btn-cancel" onclick="closeInputModal()">Hủy</button>
@@ -490,7 +490,6 @@
       }
     }
 
-    /* FIX 2: Cập nhật Settings đồng bộ với Database */
     async function updateSettings() {
       const theme = document.getElementById('setting-theme').value;
       const fontSize = document.getElementById('setting-fontsize').value;
@@ -521,6 +520,7 @@
       await mySupabaseClient.auth.signOut();
       currentUser = null;
       currentProfile = null;
+      localStorage.removeItem('temp_fcm_token'); // Xóa token tạm thời nếu có
       document.getElementById('main-screen').classList.remove('active');
       document.getElementById('auth-screen').classList.add('active');
     }
@@ -582,21 +582,11 @@
 
     const stickerData = {
       "Mèo Ami": [
-        "https://i.imgur.com/npjt5Fu.gif",
-        "https://i.imgur.com/CGeMDAV.gif",
-        "https://i.imgur.com/K4Yro2A.gif",
-        "https://i.imgur.com/YGfWNig.gif",
-        "https://i.imgur.com/7WYibTl.gif",
-        "https://i.imgur.com/Z4wFFI2.gif",
-        "https://i.imgur.com/IsF1dJF.gif",
-        "https://i.imgur.com/r2DB4tw.gif",
-        "https://i.imgur.com/JjcEGFL.gif",
-        "https://i.imgur.com/tjRRqf6.gif",
-        "https://i.imgur.com/28NOo1g.gif",
-        "https://i.imgur.com/ah3ssNh.gif",
-        "https://i.imgur.com/SEUf3Xv.gif",
-        "https://i.imgur.com/2cB5cqV.gif",
-        "https://i.imgur.com/46GKjpk.gif"
+        "https://i.imgur.com/npjt5Fu.gif", "https://i.imgur.com/CGeMDAV.gif", "https://i.imgur.com/K4Yro2A.gif",
+        "https://i.imgur.com/YGfWNig.gif", "https://i.imgur.com/7WYibTl.gif", "https://i.imgur.com/Z4wFFI2.gif",
+        "https://i.imgur.com/IsF1dJF.gif", "https://i.imgur.com/r2DB4tw.gif", "https://i.imgur.com/JjcEGFL.gif",
+        "https://i.imgur.com/tjRRqf6.gif", "https://i.imgur.com/28NOo1g.gif", "https://i.imgur.com/ah3ssNh.gif",
+        "https://i.imgur.com/SEUf3Xv.gif", "https://i.imgur.com/2cB5cqV.gif", "https://i.imgur.com/46GKjpk.gif"
       ]
     };
 
@@ -633,7 +623,6 @@
       });
     }
 
-    // --- CÁC HÀM XỬ LÝ ĐẶT BIỆT DANH IN-APP ---
     function openInputModal(title, msg, defaultValue, callback) {
       document.getElementById('input-modal-title').textContent = title;
       document.getElementById('input-modal-msg').textContent = msg;
@@ -649,9 +638,7 @@
       inputField.focus();
     }
 
-    function closeInputModal() {
-      document.getElementById('input-modal').classList.remove('active');
-    }
+    function closeInputModal() { document.getElementById('input-modal').classList.remove('active'); }
 
     function getNicknameKey(friendId) { return `boba_nick_${currentProfile.id}_${friendId}`; }
     
@@ -678,7 +665,6 @@
         loadFriendsData();
       });
     }
-    // ------------------------------------------
 
     function showAppModal(title, message, showCancel = false) {
       return new Promise((resolve) => {
@@ -743,7 +729,6 @@
       }
   
       if (!isRegisterMode) {
-        // ĐĂNG NHẬP
         const { data, error } = await mySupabaseClient.auth.signInWithPassword({ email: email, password: pass });
         if (error) { 
           await showAppModal("Lỗi rồi", "Sai mật khẩu hoặc email òi!"); 
@@ -752,7 +737,6 @@
         currentUser = data.user; 
         await loadApp();
       } else {
-        // ĐĂNG KÝ
         const username = document.getElementById('username').value.trim(); 
         const customId = getCustomId();
     
@@ -761,15 +745,11 @@
           return; 
         }
     
-        /* FIX 1: Truyền trực tiếp tag vào meta_data để Database Trigger có thể bắt được */
         const { data, error } = await mySupabaseClient.auth.signUp({
           email: email,
           password: pass,
           options: {
-            data: { 
-              username: username,
-              tag: customId /* Thêm dòng này để fix lỗi ID không nạp vào bảng */
-            }
+            data: { username: username, tag: customId }
           }
         });
 
@@ -778,22 +758,15 @@
           return;
         }
 
-        // Kiểm tra xem user có phải xác nhận email không
         if (data.user && !data.session) {
           await showAppModal("Thành công!", "Tài khoản của bạn đã được tạo! Vui lòng kiểm tra hộp thư Email để xác nhận tài khoản trước khi đăng nhập nhé.");
-          toggleAuthMode(false); // Chuyển về màn hình đăng nhập
+          toggleAuthMode(false);
           return;
         }
 
-        // Nếu có session luôn (đã tắt xác nhận Email trên Supabase)
         if (data.session) {
-            // Đợi 500ms cho Trigger Database tạo profile tự động chạy xong
             await new Promise(resolve => setTimeout(resolve, 500));
-            
-            /* FIX 1 (Bổ sung): Update thủ công tag vào bảng profile để chắc chắn 100% database sẽ có tag,
-               phòng trường hợp DB Trigger không tự động lấy biến tag từ metadata. */
             await mySupabaseClient.from('profiles').update({ tag: customId }).eq('id', data.user.id);
-            
             currentUser = data.user; 
             await loadApp();
         }
@@ -802,8 +775,6 @@
 
     async function loadApp() {
       let response = await mySupabaseClient.from('profiles').select('*, ranks(name, color, function)').eq('id', currentUser.id).single();
-      
-      // Nếu truy vấn có ranks bị lỗi (vì user mới chưa có hạng), fallback gọi profiles thông thường
       if (response.error) response = await mySupabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
       
       currentProfile = response.data; 
@@ -818,7 +789,6 @@
       const funcRes = await mySupabaseClient.from('app_functions').select('*');
       if(!funcRes.error && funcRes.data) appFunctionsList = funcRes.data;
 
-      /* Cập nhật LocalStorage dựa vào Database settings */
       if(currentProfile.theme) localStorage.setItem('boba_theme', currentProfile.theme);
       if(currentProfile.font_size) localStorage.setItem('boba_fontsize', currentProfile.font_size);
       if(currentProfile.language) localStorage.setItem('boba_lang', currentProfile.language);
@@ -831,7 +801,6 @@
         document.getElementById('my-name').style.color = currentRank.color;
       } else { rankBadge.style.display = 'none'; }
 
-      // Fix hiển thị TAG (Trường hợp DB chưa kịp lưu, hiển thị tag mặc định)
       let displayTag = currentProfile.tag ? currentProfile.tag : '0000';
       document.getElementById('my-tag').textContent = `#${displayTag}`;
       document.getElementById('my-avatar').src = getAvatarUrl(currentProfile.username + displayTag);
@@ -839,10 +808,38 @@
       document.getElementById('auth-screen').classList.remove('active');
       document.getElementById('main-screen').classList.add('active');
       
+      // KIỂM TRA FCM TOKEN NGAY KHI VỪA LOAD APP XONG
+      const tempToken = localStorage.getItem('temp_fcm_token');
+      if (tempToken) {
+          window.receiveFCMToken(tempToken);
+      }
+
       initStickerPanel(); 
       await loadFriendsData();
       subscribeToChanges();
     }
+
+    // ĐÂY LÀ HÀM QUAN TRỌNG ĐỂ HỨNG FCM TOKEN TỪ KOTLIN GỬI SANG
+    window.receiveFCMToken = async function(token) {
+        console.log("📱 Đã nhận được FCM Token từ Android:", token);
+        
+        if (typeof currentProfile !== 'undefined' && currentProfile && currentProfile.id) {
+            const { error } = await mySupabaseClient
+                .from('profiles') // Đổi tên bảng theo DB của bạn nếu cần (ví dụ users, profiles, v.v)
+                .update({ fcm_token: token })
+                .eq('id', currentProfile.id);
+                
+            if (error) {
+                console.error("Lỗi khi lưu FCM Token:", error);
+            } else {
+                console.log("✅ Đã lưu FCM Token thành công lên Supabase!");
+                localStorage.removeItem('temp_fcm_token'); // Lưu xong thì xóa token tạm
+            }
+        } else {
+            // Lưu tạm vào Cache nếu Android load xong WebView quá nhanh, trước khi user kịp đăng nhập
+            localStorage.setItem('temp_fcm_token', token);
+        }
+    };
 
     async function loadFriendsData() {
       const { data: relations } = await mySupabaseClient.from('friends').select('id, sender_id, receiver_id, status').or(`sender_id.eq.${currentProfile.id},receiver_id.eq.${currentProfile.id}`);
@@ -925,14 +922,8 @@
     }
 
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
-    
-    function toggleStickers() { 
-      document.getElementById('sticker-panel').classList.toggle('active');
-    }
-    
-    function triggerUpload() {
-      document.getElementById('file-upload').click();
-    }
+    function toggleStickers() { document.getElementById('sticker-panel').classList.toggle('active'); }
+    function triggerUpload() { document.getElementById('file-upload').click(); }
 
     document.getElementById('chat-form').addEventListener('submit', async (e) => {
       e.preventDefault(); const input = document.getElementById('message-input'); const text = input.value.trim();
@@ -968,6 +959,7 @@
       if(status === 'rejected') await mySupabaseClient.from('friends').delete().eq('id', relId); else await mySupabaseClient.from('friends').update({ status }).eq('id', relId);
       loadFriendsData();
     }
+    
     async function sendFriendRequest() {
       const q = document.getElementById('friend-search').value.trim();
       if(!q.includes('#')) { await showAppModal("Sai định dạng", "Ghi đúng định dạng Tên#ID nha!"); return; }
@@ -1065,15 +1057,11 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      // Lấy phiên đăng nhập hiện tại từ LocalStorage (do Supabase quản lý)
       const { data: { session }, error } = await mySupabaseClient.auth.getSession();
-      
       if (session) {
-        // Nếu đã có phiên đăng nhập -> Vào thẳng màn hình chính
         currentUser = session.user;
         await loadApp();
       } else {
-        // Nếu chưa có -> Hiển thị màn hình đăng nhập
         document.getElementById('auth-screen').classList.add('active');
         document.getElementById('main-screen').classList.remove('active');
       }
