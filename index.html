@@ -216,7 +216,7 @@
     .nickname-btn { background: transparent; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-light); transition: transform 0.2s; padding: 0 5px; }
     .nickname-btn:hover { transform: scale(1.2); color: var(--primary); }
 
-    .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; position: relative; scroll-behavior: smooth;}
+    .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; position: relative;}
     
     /* Giao diện Reply Tin nhắn giống Messenger */
     .reply-preview-container { display: none; background: var(--bg-glass-heavy); border-left: 4px solid var(--primary); padding: 8px 15px; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; border-top: 1px solid var(--glass-border); }
@@ -504,6 +504,12 @@
       if (window.AndroidBridge) {
         window.AndroidBridge.showNativeNotification(title, msg);
       }
+      if (window.AndroidBridge && typeof window.AndroidBridge.showNativeNotification === 'function') {
+        window.AndroidBridge.showNativeNotification(title, message);
+      } else {
+        // Fallback: Log ra console hoặc dùng Web Notification API khi chạy trên trình duyệt thường
+        console.log("🔔 Web Notification: ", title, message);
+    } 
     }
 
     async function updateSettings() {
@@ -557,6 +563,23 @@
         opt_light: "Light", opt_dark: "Dark", opt_small: "Small", opt_medium: "Medium", opt_large: "Large"
       }
     };
+
+    function updateReaction(msgId, reactionText) {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+        let badge = el.querySelector('.reaction-badge');
+        if(!badge) { 
+            badge = document.createElement('div'); 
+            badge.className = 'reaction-badge'; 
+            el.appendChild(badge); 
+        }
+        badge.textContent = reactionText;
+    } else {
+        // Thử lại sau 100ms nếu DOM chưa kịp render
+        setTimeout(() => updateReaction(msgId, reactionText), 100);
+    }
+}
+// Áp dụng vào sự kiện UPDATE của Supabase: updateReaction(m.id, m.reaction);
 
     function applySettings() {
       const theme = localStorage.getItem('boba_theme') || 'light';
