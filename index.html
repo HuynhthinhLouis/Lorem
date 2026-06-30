@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -272,6 +272,35 @@
 
     .register-avatar-preview { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin: 0 auto; display: block; cursor: pointer; background: var(--white); box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
 
+    /* --- GIAO DIỆN SYSTEM LOG CHO FOUNDER --- */
+    #sys-log-modal .modal-box { 
+      width: 95%; max-width: 650px; height: 85vh; display: flex; flex-direction: column; text-align: left; 
+      background: rgba(15, 15, 15, 0.95); border: 1px solid #333; 
+    }
+    .log-header { 
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; 
+      border-bottom: 1px solid #333; padding-bottom: 10px; 
+    }
+    .log-title { color: #00ffcc; font-family: monospace; font-size: 1.2rem; font-weight: bold; margin: 0; }
+    .log-controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .log-btn { 
+      background: #333; color: white; border: none; padding: 6px 12px; border-radius: 8px; 
+      font-size: 0.85rem; font-family: monospace; cursor: pointer; transition: 0.2s;
+    }
+    .log-btn:hover { background: #555; }
+    .log-btn.active { background: #00ffcc; color: black; font-weight: bold; }
+    .log-btn.clear { background: #d9534f; margin-left: auto; }
+    .log-viewer { 
+      flex: 1; overflow-y: auto; background: #0a0a0a; color: #d4d4d4; font-family: monospace; 
+      font-size: 0.85rem; padding: 12px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; 
+      border: 1px solid #222; scroll-behavior: smooth;
+    }
+    .log-item { margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px dashed #222; }
+    .log-item.info { color: #5bc0de; }
+    .log-item.warn { color: #f0ad4e; }
+    .log-item.error { color: #d9534f; font-weight: bold; }
+    .log-time { color: #777; font-size: 0.75rem; margin-right: 8px; }
+    
   </style>
 </head>
 <body>
@@ -280,6 +309,23 @@
   
   <div id="notification-container"></div>
 
+  <div id="sys-log-modal" class="modal-overlay" style="z-index: 100005;">
+    <div class="modal-box">
+      <div class="log-header">
+        <h3 class="log-title">>_ BOBA_SYS_LOGS</h3>
+        <button onclick="closeSysLogs()" style="background:none; border:none; color:white; font-size:1.4rem; cursor:pointer;">✕</button>
+      </div>
+      <div class="log-controls">
+        <button class="log-btn active" id="btn-log-all" onclick="filterSysLogs('ALL')">ALL</button>
+        <button class="log-btn" id="btn-log-info" onclick="filterSysLogs('INFO')">INFO</button>
+        <button class="log-btn" id="btn-log-warn" onclick="filterSysLogs('WARN')">WARN</button>
+        <button class="log-btn" id="btn-log-error" onclick="filterSysLogs('ERROR')">ERROR</button>
+        <button class="log-btn clear" onclick="clearSysLogs()">CLEAR</button>
+      </div>
+      <div id="log-viewer-content" class="log-viewer"></div>
+    </div>
+  </div>
+  
   <div id="app-modal" class="modal-overlay">
     <div class="modal-box">
       <h3 id="modal-title" class="modal-title">Thông báo</h3>
@@ -419,6 +465,12 @@
           </div>
 
         </div>
+        <div id="founder-tools" style="display: none;">
+          <h3 style="margin: 25px 25px 10px 25px; font-size: 1.15rem; color: #d9534f; font-weight: 800;">Công cụ Nhà Sáng Lập 🛠</h3>
+          <div class="setting-item" style="cursor: pointer; justify-content: center; background: rgba(217, 83, 79, 0.1); border: 1px dashed rgba(217, 83, 79, 0.4); color: #d9534f; font-family: monospace;" onclick="openSysLogs()">
+            <span>>_ Xem System Logs</span>
+          </div>
+        </div>
       </div>
 
       <div class="bottom-nav">
@@ -473,6 +525,82 @@
   </div>
 
   <script>
+
+    const bobaLogs = [];
+    const MAX_LOGS = 500;
+
+    function captureSysLog(level, ...args) {
+      const msg = args.map(a => {
+        if (a instanceof Error) return a.stack || a.message;
+        return typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a);
+      }).join(' ');
+  
+      const time = new Date().toLocaleTimeString('vi-VN', { hour12: false });
+      bobaLogs.push({ level, msg, time });
+      if (bobaLogs.length > MAX_LOGS) bobaLogs.shift();
+  
+      if (document.getElementById('sys-log-modal')?.classList.contains('active')) {
+        renderSysLogs();
+      }
+    }
+
+    const origLog = console.log, origWarn = console.warn, origError = console.error;
+    console.log = function(...args) { captureSysLog('INFO', ...args); origLog.apply(console, args); };
+    console.warn = function(...args) { captureSysLog('WARN', ...args); origWarn.apply(console, args); };
+    console.error = function(...args) { captureSysLog('ERROR', ...args); origError.apply(console, args); };
+
+    window.onerror = function(msg, src, line, col, err) {
+      captureSysLog('ERROR', `Uncaught: ${msg} tại ${src}:${line}:${col}`);
+    };
+    window.onunhandledrejection = function(e) {
+      captureSysLog('ERROR', `Promise Rejection: ${e.reason}`);
+    };
+
+    let currentLogFilter = 'ALL';
+
+    function openSysLogs() {
+      document.getElementById('sys-log-modal').classList.add('active');
+      renderSysLogs();
+    }
+
+    function closeSysLogs() {
+      document.getElementById('sys-log-modal').classList.remove('active');
+    }
+
+    function filterSysLogs(level) {
+      currentLogFilter = level;
+      document.querySelectorAll('.log-controls .log-btn:not(.clear)').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`btn-log-${level.toLowerCase()}`).classList.add('active');
+      renderSysLogs();
+    }
+
+    function clearSysLogs() {
+      bobaLogs.length = 0;
+      renderSysLogs();
+      console.log("Hệ thống đã được dọn dẹp.");
+    }
+
+    function renderSysLogs() {
+      const viewer = document.getElementById('log-viewer-content');
+      viewer.innerHTML = '';
+  
+      const filteredLogs = currentLogFilter === 'ALL' ? bobaLogs : bobaLogs.filter(log => log.level === currentLogFilter);
+
+      if (filteredLogs.length === 0) {
+        viewer.innerHTML = '<div style="color: #555; text-align: center; margin-top: 20px;">[ Không có dữ liệu log ]</div>';
+        return;
+      }
+
+      filteredLogs.forEach(log => {
+        const item = document.createElement('div');
+        item.className = `log-item ${log.level.toLowerCase()}`;
+        item.innerHTML = `<span class="log-time">[${log.time}]</span> <span style="font-weight:bold;">[${log.level}]</span> ${log.msg}`;
+        viewer.appendChild(item);
+      });
+  
+      viewer.scrollTop = viewer.scrollHeight;
+    }
+    
     function getAvatarUrl(seed) {
       if (!seed) seed = "Boba";
       return `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede`;
@@ -507,7 +635,6 @@
       if (window.AndroidBridge && typeof window.AndroidBridge.showNativeNotification === 'function') {
         window.AndroidBridge.showNativeNotification(title, message);
       } else {
-        // Fallback: Log ra console hoặc dùng Web Notification API khi chạy trên trình duyệt thường
         console.log("🔔 Web Notification: ", title, message);
     } 
     }
@@ -542,7 +669,7 @@
       await mySupabaseClient.auth.signOut();
       currentUser = null;
       currentProfile = null;
-      localStorage.removeItem('temp_fcm_token'); // Xóa token tạm thời nếu có
+      localStorage.removeItem('temp_fcm_token');
       document.getElementById('main-screen').classList.remove('active');
       document.getElementById('auth-screen').classList.add('active');
     }
@@ -575,11 +702,9 @@
         }
         badge.textContent = reactionText;
     } else {
-        // Thử lại sau 100ms nếu DOM chưa kịp render
         setTimeout(() => updateReaction(msgId, reactionText), 100);
     }
 }
-// Áp dụng vào sự kiện UPDATE của Supabase: updateReaction(m.id, m.reaction);
 
     function applySettings() {
       const theme = localStorage.getItem('boba_theme') || 'light';
@@ -620,7 +745,6 @@
     let replyingMessageId = null;
     let registerAvatarFile = null;
 
-    // Hàm hiển thị xem trước avatar lúc đăng ký
     function previewRegisterAvatar(e) {
       const file = e.target.files[0];
       if (file) {
@@ -629,7 +753,6 @@
       }
     }
 
-    // Hàm đổi avatar trong Tab Hồ sơ
     async function updateProfileAvatar(e) {
       const file = e.target.files[0];
       if (!file || !currentProfile) return;
@@ -639,7 +762,6 @@
       const fileExt = file.name.split('.').pop();
       const fileName = `avatar_${currentProfile.id}_${Date.now()}.${fileExt}`;
   
-      // Upload lên bucket 'avatars'
       const { error: uploadError } = await mySupabaseClient.storage.from('avatars').upload(fileName, file);
   
       if (uploadError) {
@@ -649,7 +771,6 @@
   
       const imgUrl = mySupabaseClient.storage.from('avatars').getPublicUrl(fileName).data.publicUrl;
   
-      // Cập nhật đường dẫn vào database
       const { error: updateError } = await mySupabaseClient.from('profiles')
         .update({ avatar_url: imgUrl })
         .eq('id', currentProfile.id);
@@ -662,7 +783,7 @@
       currentProfile.avatar_url = imgUrl;
       document.getElementById('my-avatar').src = imgUrl;
       showAppNotification('Thành công', 'Đã cập nhật ảnh đại diện mới!');
-      loadFriendsData(); // Cập nhật lại list bạn bè nếu cần
+      loadFriendsData();
     }
 
     const stickerData = {
@@ -853,7 +974,6 @@
             await new Promise(resolve => setTimeout(resolve, 500));
     
             let customAvatarUrl = null;
-            // Nếu người dùng có chọn ảnh lúc đăng ký thì upload ảnh đó
             if (registerAvatarFile) {
                 const fileExt = registerAvatarFile.name.split('.').pop();
                 const fileName = `avatar_${data.user.id}_${Date.now()}.${fileExt}`;
@@ -863,7 +983,6 @@
                 }
             }
 
-            // Cập nhật tag ID và url ảnh (nếu có)
             const updateData = { tag: customId };
             if (customAvatarUrl) updateData.avatar_url = customAvatarUrl;
 
@@ -899,9 +1018,16 @@
       document.getElementById('my-name').textContent = currentProfile.username;
       const rankBadge = document.getElementById('my-rank');
       if (currentRank) {
-        rankBadge.style.display = 'inline-block'; rankBadge.style.background = currentRank.color; rankBadge.textContent = currentRank.name;
-        document.getElementById('my-name').style.color = currentRank.color;
-      } else { rankBadge.style.display = 'none'; }
+        const rName = currentRank.name.toLowerCase();
+        if (rName.includes('founder') || rName.includes('sáng lập') || rName.includes('admin')) {
+          document.getElementById('founder-tools').style.display = 'block';
+          console.log(`🚀 Đã cấp quyền Nhà sáng lập cho: ${currentProfile.username}`);
+        } else {
+          document.getElementById('founder-tools').style.display = 'none';
+        }
+      } else {
+        document.getElementById('founder-tools').style.display = 'none';
+      }
 
       let displayTag = currentProfile.tag ? currentProfile.tag : '0000';
       document.getElementById('my-tag').textContent = `#${displayTag}`;
@@ -909,8 +1035,7 @@
       
       document.getElementById('auth-screen').classList.remove('active');
       document.getElementById('main-screen').classList.add('active');
-      
-      // KIỂM TRA FCM TOKEN NGAY KHI VỪA LOAD APP XONG
+
       const tempToken = localStorage.getItem('temp_fcm_token');
       if (tempToken) {
           window.receiveFCMToken(tempToken);
@@ -921,13 +1046,12 @@
       subscribeToChanges();
     }
 
-    // ĐÂY LÀ HÀM QUAN TRỌNG ĐỂ HỨNG FCM TOKEN TỪ KOTLIN GỬI SANG
     window.receiveFCMToken = async function(token) {
         console.log("📱 Đã nhận được FCM Token từ Android:", token);
         
         if (typeof currentProfile !== 'undefined' && currentProfile && currentProfile.id) {
             const { error } = await mySupabaseClient
-                .from('profiles') // Đổi tên bảng theo DB của bạn nếu cần (ví dụ users, profiles, v.v)
+                .from('profiles') 
                 .update({ fcm_token: token })
                 .eq('id', currentProfile.id);
                 
@@ -935,10 +1059,9 @@
                 console.error("Lỗi khi lưu FCM Token:", error);
             } else {
                 console.log("✅ Đã lưu FCM Token thành công lên Supabase!");
-                localStorage.removeItem('temp_fcm_token'); // Lưu xong thì xóa token tạm
+                localStorage.removeItem('temp_fcm_token');
             }
         } else {
-            // Lưu tạm vào Cache nếu Android load xong WebView quá nhanh, trước khi user kịp đăng nhập
             localStorage.setItem('temp_fcm_token', token);
         }
     };
