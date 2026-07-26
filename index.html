@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -729,9 +729,31 @@
       });
     }
 
+    // --- CẤU HÌNH SUPABASE MỚI CỦA BẠN ---
     const supabaseUrl = 'https://amccmhqxmnfxhsjmxhbh.supabase.co';
     const supabaseSecretKey = 'sb_publishable_rAPznr0wt-4tt6JAHm30Bw_kH6BIA0H'; 
     const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
+
+    // --- CƠ CHẾ KEEP-ALIVE CHỐNG DISABLE PROJECT SUPABASE ---
+    function keepSupabaseAlive() {
+      const pingDatabase = async () => {
+        try {
+          // Thực hiện một truy vấn cực nhẹ tốn ít tài nguyên nhất
+          const { error } = await mySupabaseClient.from('profiles').select('id').limit(1);
+          if(!error) console.log("🟢 Keep-Alive Ping: Đã tương tác với Supabase để giữ project hoạt động.");
+        } catch (err) {
+          console.error("🔴 Keep-Alive Error:", err);
+        }
+      };
+
+      // Gọi ngay 1 lần khi load web
+      pingDatabase();
+      // Sau đó lặp lại mỗi 10 phút (600000 ms) chừng nào tab trình duyệt còn mở
+      setInterval(pingDatabase, 10 * 60 * 1000);
+    }
+
+    // Kích hoạt cơ chế chống Sleep ngay lập tức
+    keepSupabaseAlive();
 
     let currentUser = null; 
     let currentProfile = null; 
