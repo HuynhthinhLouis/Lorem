@@ -226,10 +226,11 @@
     .msg-reply-node { font-size: 0.8rem; background: rgba(0,0,0,0.06); padding: 5px 10px; border-radius: 12px; margin-bottom: 4px; max-width: 100%; color: var(--text-light); font-style: italic; border-left: 3px solid var(--primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
     body.dark-mode .msg-reply-node { background: rgba(255,255,255,0.08); }
 
-    /* Message Bubbles - Ngăn bôi đen khi nhấn giữ */
+    /* Message Bubbles - Hỗ trợ Vuốt & Ngăn bôi đen text */
     .msg-wrapper { 
       display: flex; flex-direction: column; max-width: 78%; position: relative; cursor: pointer; 
-      user-select: none; -webkit-user-select: none; touch-action: manipulation;
+      user-select: none; -webkit-user-select: none; touch-action: pan-y;
+      will-change: transform;
     }
     .msg-wrapper.sent { align-self: flex-end; align-items: flex-end; }
     .msg-wrapper.received { align-self: flex-start; align-items: flex-start; }
@@ -269,7 +270,7 @@
     .chat-input-area button[type="submit"] { background: var(--primary); color: white; border: none; width: 46px; height: 46px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(212, 163, 115, 0.4); transition: transform 0.2s;}
     .chat-input-area button[type="submit"]:active { transform: scale(0.9); }
     
-    /* Làm lại Sticker Panel kiểu Messenger / Zalo */
+    /* Sticker Panel */
     .sticker-panel { display: none; position: absolute; bottom: 85px; left: 15px; right: 15px; background: var(--bg-glass-heavy); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 -10px 30px rgba(0,0,0,0.12); flex-direction: column; height: 280px; z-index: 60; overflow: hidden; }
     .sticker-panel.active { display: flex; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .sticker-tabs { display: flex; background: rgba(0,0,0,0.03); border-bottom: 1px solid var(--glass-border); overflow-x: auto; padding: 5px 10px; gap: 8px; }
@@ -281,14 +282,14 @@
     .sticker-item-img:hover, .sticker-item-img:active { transform: scale(1.18); }
     @keyframes slideUp { from { opacity: 0; transform: translateY(15px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-    /* Styling cho Avatar Upload */
+    /* Avatar Upload */
     .avatar-wrapper { position: relative; display: inline-block; cursor: pointer; margin-bottom: 12px; }
     .avatar-edit-icon { position: absolute; bottom: 5px; right: 0; background: var(--primary); color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 1rem; border: 3px solid var(--bg-glass-heavy); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.2s; }
     .avatar-wrapper:active .avatar-edit-icon { transform: scale(0.9); }
 
     .register-avatar-preview { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin: 0 auto; display: block; cursor: pointer; background: var(--white); box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
 
-    /* --- GIAO DIỆN SYSTEM LOG CHO FOUNDER --- */
+    /* SYSTEM LOG FOR FOUNDER */
     #sys-log-modal .modal-box { 
       width: 95%; max-width: 650px; height: 85vh; display: flex; flex-direction: column; text-align: left; 
       background: rgba(15, 15, 15, 0.95); border: 1px solid #333; 
@@ -317,13 +318,13 @@
     .log-item.error { color: #d9534f; font-weight: bold; }
     .log-time { color: #777; font-size: 0.75rem; margin-right: 8px; }
 
-    /* Tùy chỉnh thanh cuộn (Scrollbar) cho hiện đại */
+    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(212, 163, 115, 0.4); border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-    /* Thêm hiệu ứng nổi mềm mại khi tương tác với bong bóng chat */
+    /* Hiệu ứng bong bóng chat */
     .msg-bubble, .msg-img { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .msg-bubble:hover, .msg-img:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08) !important; }
 
@@ -334,6 +335,14 @@
   <div class="boba-bg" id="boba-bg"></div> 
   
   <div id="notification-container"></div>
+
+  <!-- MÀN HÌNH XEM ẢNH TOÀN MÀN HÌNH -->
+  <div id="image-viewer-modal" class="modal-overlay" style="z-index: 100002; background: rgba(0,0,0,0.85);" onclick="closeImageViewer(event)">
+    <div style="position: relative; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; align-items: center;">
+      <button onclick="closeImageViewerDirect()" style="position: absolute; top: -45px; right: 0; background: rgba(255,255,255,0.25); color: white; border: 1px solid rgba(255,255,255,0.4); font-size: 1.6rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: transform 0.2s;">✕</button>
+      <img id="image-viewer-img" src="" style="max-width: 100%; max-height: 82vh; border-radius: 18px; object-fit: contain; box-shadow: 0 10px 40px rgba(0,0,0,0.6);">
+    </div>
+  </div>
 
   <div id="sys-log-modal" class="modal-overlay" style="z-index: 100005;">
     <div class="modal-box">
@@ -662,6 +671,25 @@
       } 
     }
 
+    /* --- XỬ LÝ MÀN HÌNH XEM ẢNH --- */
+    function openImageViewer(url) {
+      document.getElementById('image-viewer-img').src = url;
+      document.getElementById('image-viewer-modal').classList.add('active');
+    }
+
+    function closeImageViewer(e) {
+      if (e.target.id === 'image-viewer-modal') {
+        closeImageViewerDirect();
+      }
+    }
+
+    function closeImageViewerDirect() {
+      document.getElementById('image-viewer-modal').classList.remove('active');
+      setTimeout(() => {
+        document.getElementById('image-viewer-img').src = '';
+      }, 300);
+    }
+
     async function updateSettings() {
       const theme = document.getElementById('setting-theme').value;
       const fontSize = document.getElementById('setting-fontsize').value;
@@ -752,12 +780,12 @@
       });
     }
 
-    // --- CẤU HÌNH SUPABASE MỚI CỦA BẠN ---
+    // --- CẤU HÌNH SUPABASE ---
     const supabaseUrl = 'https://amccmhqxmnfxhsjmxhbh.supabase.co';
     const supabaseSecretKey = 'sb_publishable_rAPznr0wt-4tt6JAHm30Bw_kH6BIA0H'; 
     const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
 
-    // --- CƠ CHẾ KEEP-ALIVE CHỐNG DISABLE PROJECT SUPABASE ---
+    // --- KEEP-ALIVE ---
     function keepSupabaseAlive() {
       const pingDatabase = async () => {
         try {
@@ -1308,28 +1336,110 @@
       }
     }
 
+    /* --- HIỆU ỨNG THẢ TIM NHANH KHI DOUBLE TAP --- */
+    async function quickHeartReaction(msgId, x, y) {
+      showHeartPopAnimation(x, y);
+      await mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msgId);
+    }
+
+    function showHeartPopAnimation(x, y) {
+      const heart = document.createElement('div');
+      heart.innerHTML = '❤️';
+      heart.style.position = 'fixed';
+      heart.style.left = `${x - 20}px`;
+      heart.style.top = `${y - 20}px`;
+      heart.style.fontSize = '36px';
+      heart.style.zIndex = '100003';
+      heart.style.pointerEvents = 'none';
+      heart.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      heart.style.transform = 'scale(0.3) translateY(0)';
+      heart.style.opacity = '1';
+
+      document.body.appendChild(heart);
+
+      requestAnimationFrame(() => {
+        heart.style.transform = 'scale(1.4) translateY(-60px)';
+        heart.style.opacity = '0';
+      });
+
+      setTimeout(() => heart.remove(), 600);
+    }
+
     function renderMessage(msg) {
       const isMe = msg.sender_id === currentProfile.id;
       const wrap = document.createElement('div');
       wrap.className = `msg-wrapper ${isMe ? 'sent' : 'received'}`; wrap.id = `msg-${msg.id}`;
 
-      let pressTimer; let isDragging = false; let lastTap = 0;
       const senderName = isMe ? "Bạn" : document.getElementById('chat-room-name').textContent;
       let pureContent = msg.content || "";
       if(pureContent.startsWith("[REPLY:")) pureContent = pureContent.substring(pureContent.indexOf("] ") + 2);
+      const msgPreview = msg.is_sticker ? "[Sticker]" : (msg.image_url ? "[Hình ảnh]" : pureContent);
 
-      const startPress = () => { isDragging = false; pressTimer = setTimeout(() => showReactionPicker(msg.id), 500); };
-      wrap.addEventListener('touchstart', startPress, {passive: true});
-      wrap.addEventListener('touchmove', () => { isDragging = true; clearTimeout(pressTimer); }, {passive: true});
+      /* --- XỬ LÝ SWIPE TO REPLY & DOUBLE TAP TO HEART & PRESS HOLD TO REACTION --- */
+      let pressTimer; 
+      let startX = 0; 
+      let currentX = 0; 
+      let isSwiping = false; 
+      let lastTap = 0;
+
+      wrap.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        currentX = startX;
+        isSwiping = false;
+        wrap.style.transition = 'none';
+
+        pressTimer = setTimeout(() => {
+          if (!isSwiping && Math.abs(currentX - startX) < 10) {
+            showReactionPicker(msg.id);
+          }
+        }, 500);
+      }, {passive: true});
+
+      wrap.addEventListener('touchmove', (e) => {
+        currentX = e.touches[0].clientX;
+        let diffX = currentX - startX;
+
+        if (Math.abs(diffX) > 10) {
+          clearTimeout(pressTimer);
+          isSwiping = true;
+        }
+
+        if (isSwiping && Math.abs(diffX) < 90) {
+          wrap.style.transform = `translateX(${diffX}px)`;
+        }
+      }, {passive: true});
+
       wrap.addEventListener('touchend', (e) => {
-        clearTimeout(pressTimer); if (isDragging) return;
-        let currentTime = new Date().getTime(); let tapLength = currentTime - lastTap;
-        if (tapLength < 300 && tapLength > 0) { setReplyMode(msg.id, senderName, msg.is_sticker ? "[Sticker]" : (msg.image_url ? "[Hình ảnh]" : pureContent)); e.preventDefault(); }
-        lastTap = currentTime;
+        clearTimeout(pressTimer);
+        let diffX = currentX - startX;
+
+        wrap.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        wrap.style.transform = 'translateX(0)';
+
+        if (isSwiping && Math.abs(diffX) > 50) {
+          setReplyMode(msg.id, senderName, msgPreview);
+          if (navigator.vibrate) navigator.vibrate(40);
+        } else if (!isSwiping) {
+          let currentTime = new Date().getTime();
+          let tapLength = currentTime - lastTap;
+          if (tapLength < 300 && tapLength > 0) {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            quickHeartReaction(msg.id, touch ? touch.clientX : window.innerWidth/2, touch ? touch.clientY : window.innerHeight/2);
+          }
+          lastTap = currentTime;
+        }
       });
-      wrap.addEventListener('mousedown', startPress); wrap.addEventListener('mouseup', () => clearTimeout(pressTimer));
+
+      wrap.addEventListener('mousedown', (e) => {
+        pressTimer = setTimeout(() => showReactionPicker(msg.id), 500);
+      });
+      wrap.addEventListener('mouseup', () => clearTimeout(pressTimer));
       wrap.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-      wrap.ondblclick = () => setReplyMode(msg.id, senderName, msg.is_sticker ? "[Sticker]" : (msg.image_url ? "[Hình ảnh]" : pureContent));
+
+      wrap.ondblclick = (e) => {
+        quickHeartReaction(msg.id, e.clientX, e.clientY);
+      };
 
       let replyNodeHTML = ""; let rawContent = msg.content || ""; let rawImgUrl = msg.image_url || "";
       if(rawContent.startsWith("[REPLY:") || rawImgUrl.startsWith("[REPLY:")) {
@@ -1342,7 +1452,7 @@
 
       let mainContentHTML = "";
       if (msg.is_sticker) mainContentHTML = `<img class="msg-bubble msg-sticker" src="${rawContent}">`;
-      else if (rawImgUrl) mainContentHTML = `<img class="msg-img" src="${rawImgUrl}" onclick="window.open('${rawImgUrl}')">`;
+      else if (rawImgUrl) mainContentHTML = `<img class="msg-img" src="${rawImgUrl}" onclick="openImageViewer('${rawImgUrl}')">`;
       else mainContentHTML = `<div class="msg-bubble">${rawContent}</div>`;
 
       let reactionHTML = msg.reaction ? `<div class="reaction-badge">${msg.reaction}</div>` : '';
