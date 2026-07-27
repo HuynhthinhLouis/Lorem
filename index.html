@@ -340,6 +340,14 @@
     </div>
   </div>
 
+  <!-- MÀN HÌNH XEM VIDEO TOÀN MÀN HÌNH -->
+  <div id="video-viewer-modal" class="modal-overlay" style="z-index: 100002; background: rgba(0,0,0,0.85);" onclick="closeVideoViewer(event)">
+    <div style="position: relative; width: 95%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; align-items: center;">
+      <button onclick="closeVideoViewerDirect()" style="position: absolute; top: -45px; right: 0; background: rgba(255,255,255,0.25); color: white; border: 1px solid rgba(255,255,255,0.4); font-size: 1.6rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: transform 0.2s; z-index: 10;">✕</button>
+      <video id="video-viewer-vid" controls playsinline style="max-width: 100%; max-height: 82vh; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #000; outline: none;"></video>
+    </div>
+  </div>
+
   <div id="sys-log-modal" class="modal-overlay" style="z-index: 100005;">
     <div class="modal-box">
       <div class="log-header">
@@ -678,6 +686,24 @@
     function closeImageViewerDirect() {
       document.getElementById('image-viewer-modal').classList.remove('active');
       setTimeout(() => { document.getElementById('image-viewer-img').src = ''; }, 300);
+    }
+
+    function openVideoViewer(url) {
+      const videoEl = document.getElementById('video-viewer-vid');
+      videoEl.src = url;
+      document.getElementById('video-viewer-modal').classList.add('active');
+      videoEl.play().catch(e => console.log("Auto-play bị chặn bởi trình duyệt:", e));
+    }
+
+    function closeVideoViewer(e) {
+      if (e.target.id === 'video-viewer-modal') closeVideoViewerDirect();
+    }
+
+    function closeVideoViewerDirect() {
+      const videoEl = document.getElementById('video-viewer-vid');
+      document.getElementById('video-viewer-modal').classList.remove('active');
+      videoEl.pause(); 
+      setTimeout(() => { videoEl.src = ''; }, 300); // Dọn source sau khi ẩn mượt
     }
 
     async function updateSettings() {
@@ -1283,252 +1309,51 @@
         .select('*')
         .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fid}),and(sender_id.eq.${fid},receiver_id.eq.${currentProfile.id})`)
         .order('created_at', { ascending: true });
-        
-      if(msgs) msgs.forEach(m => renderMessage(m));
-      setTimeout(() => area.scrollTo(0, area.scrollHeight), 150);
-      updateCountdowns();
+
+      if (msgs) msgs.forEach(m => renderMessage(m));
+      scrollToBottom();
+      
+      const elMsgBox = document.getElementById(`last-msg-${fid}`);
+      if(elMsgBox) elMsgBox.style.fontWeight = 'normal';
     }
 
-    function setReplyMode(msgId, senderName, contentPreview) {
+    function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; cancelReplyMode(); }
+
+    function replyToMessage(msgId, content, isSticker, imgUrl) {
       replyingMessageId = msgId;
-      const container = document.getElementById('reply-preview-container');
-      const contentEl = document.getElementById('reply-preview-content');
-      contentEl.textContent = `Đang trả lời ${senderName}: "${contentPreview}"`;
-      container.style.display = "flex";
+      document.getElementById('reply-preview-container').style.display = 'flex';
+      let previewText = content;
+      if (isSticker) previewText = "[Sticker]";
+      else if (imgUrl) previewText = imgUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? "[Video]" : "[Hình ảnh]";
+      document.getElementById('reply-preview-content').textContent = "Đang trả lời: " + previewText;
       document.getElementById('message-input').focus();
     }
-
-    function cancelReplyMode() {
-      replyingMessageId = null; document.getElementById('reply-preview-container').style.display = "none";
-    }
-
-    function jumpToMessage(msgId) {
-      const target = document.getElementById(`msg-${msgId}`);
-      if(target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); target.style.outline = "2px dashed var(--primary)"; setTimeout(() => target.style.outline = "none", 2000); }
-    }
-
-    function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; loadFriendsData();}
-    function toggleStickers() { document.getElementById('sticker-panel').classList.toggle('active'); }
-    function triggerUpload() { document.getElementById('file-upload').click(); }
-
-    document.getElementById('chat-form').addEventListener('submit', async (e) => {
-      e.preventDefault(); const input = document.getElementById('message-input'); const text = input.value.trim();
-      if(text && activeFriendId) { 
-        input.value = ''; 
-        let finalContent = text;
-        if(replyingMessageId) { finalContent = `[REPLY:${replyingMessageId}] ` + text; cancelReplyMode(); }
-        await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: finalContent }]); 
-      }
-    });
-
-    async function sendSticker(url) {
-      document.getElementById('sticker-panel').classList.remove('active');
-      let finalContent = url;
-      if(replyingMessageId) { finalContent = `[REPLY:${replyingMessageId}] ` + url; cancelReplyMode(); }
-      if(activeFriendId) await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, content: finalContent, is_sticker: true }]);
-    }
-
-    /* --- HAM XU LY TAI LÊN CA ANH VÀ VIDEO CHO CHAT --- */
-    async function uploadMedia(e) {
-      let file = e.target.files[0]; 
-      if(!file || !activeFriendId) return;
-
-      const isVideo = file.type.startsWith('video/');
-      const isImage = file.type.startsWith('image/');
-      
-      if (!isImage && !isVideo) {
-        await showAppModal("Không hỗ trợ", "Chỉ chấp nhận gửi file Ảnh hoặc Video!");
-        e.target.value = ''; return;
-      }
-
-      showAppNotification('Đang xử lý...', isVideo ? 'Đang nén Video...' : 'Đang nén Ảnh...');
-
-      if (isImage) {
-        file = await compressImage(file, 1280, 0.75);
-      } else if (isVideo) {
-        file = await compressVideo(file, 640, 800000);
-      }
-      
-      if (file.size > 48 * 1024 * 1024) {
-        await showAppModal("Tệp quá lớn", "Dung lượng sau nén vẫn vượt quá 48MB limit của Bucket!");
-        e.target.value = ''; return;
-      }
-      
-      let fileExt = file.name.split('.').pop().replace(/[^a-zA-Z0-9]/g, '');
-      const fileName = `media_${currentProfile.id}_${Date.now()}.${fileExt}`;
-      
-      try {
-        showAppNotification('Đang tải lên...', 'Đang chuyển tệp lên máy chủ Supabase 🚀');
-        const { error } = await mySupabaseClient.storage
-          .from('chat_images')
-          .upload(fileName, file, { cacheControl: '3600', upsert: false });
-
-        if(error) { 
-          await showAppModal("Lỗi tải lên", error.message || "Không thể tải lên máy chủ"); 
-          e.target.value = ''; return; 
-        }
-        
-        const { data: publicUrlData } = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName);
-        const mediaUrl = publicUrlData.publicUrl;
-        
-        let finalMediaUrl = mediaUrl;
-        if(replyingMessageId) { 
-          finalMediaUrl = `[REPLY:${replyingMessageId}]` + mediaUrl; 
-          cancelReplyMode(); 
-        }
-        
-        await mySupabaseClient.from('messages').insert([{ 
-          sender_id: currentProfile.id, 
-          receiver_id: activeFriendId, 
-          image_url: finalMediaUrl 
-        }]);
-
-      } catch (err) {
-        await showAppModal("Lỗi hệ thống", err.message || "Không thể gửi phương tiện");
-      } finally {
-        e.target.value = ''; 
-      }
-    }
-
-    async function respondRequest(relId, status) {
-      if(status === 'rejected') await mySupabaseClient.from('friends').delete().eq('id', relId); 
-      else await mySupabaseClient.from('friends').update({ status }).eq('id', relId);
-      loadFriendsData();
-    }
     
-    async function sendFriendRequest() {
-      const q = document.getElementById('friend-search').value.trim();
-      if(!q.includes('#')) { await showAppModal("Sai định dạng", "Ghi đúng định dạng Tên#ID nha!"); return; }
-      const [u, t] = q.split('#');
-      const { data: f } = await mySupabaseClient.from('profiles').select('id').eq('username', u).eq('tag', t).single();
-      if(!f) { await showAppModal("Buồn ghê", "Hổng tìm thấy bạn này :("); return; }
-      if(f.id === currentProfile.id) { await showAppModal("Alo", "Đừng tự kết bạn với chính mình!"); return; }
-      await mySupabaseClient.from('friends').insert([{ sender_id: currentProfile.id, receiver_id: f.id, status: 'pending' }]);
-      showAppNotification('Thành công', 'Đã gửi lời mời!'); document.getElementById('friend-search').value = '';
+    function cancelReplyMode() {
+      replyingMessageId = null;
+      document.getElementById('reply-preview-container').style.display = 'none';
+      document.getElementById('reply-preview-content').textContent = '';
     }
 
-    let activeReactionMsgId = null;
-    function showReactionPicker(msgId) {
-      activeReactionMsgId = msgId; document.getElementById('reaction-overlay').classList.add('active');
-      if (navigator.vibrate) navigator.vibrate(50);
-    }
-    function closeReactionPicker(e) {
-      if(e.target.id === 'reaction-overlay') { document.getElementById('reaction-overlay').classList.remove('active'); activeReactionMsgId = null; }
-    }
-    async function submitReaction(emoji) {
-      if (activeReactionMsgId) {
-        document.getElementById('reaction-overlay').classList.remove('active');
-        await mySupabaseClient.from('messages').update({ reaction: emoji }).eq('id', activeReactionMsgId); activeReactionMsgId = null;
-      }
-    }
-
-    async function quickHeartReaction(msgId, x, y) {
-      showHeartPopAnimation(x, y);
-      await mySupabaseClient.from('messages').update({ reaction: '❤️' }).eq('id', msgId);
-    }
-
-    function showHeartPopAnimation(x, y) {
-      const heart = document.createElement('div');
-      heart.innerHTML = '❤️';
-      heart.style.position = 'fixed';
-      heart.style.left = `${x - 20}px`;
-      heart.style.top = `${y - 20}px`;
-      heart.style.fontSize = '36px';
-      heart.style.zIndex = '100003';
-      heart.style.pointerEvents = 'none';
-      heart.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-      heart.style.transform = 'scale(0.3) translateY(0)';
-      heart.style.opacity = '1';
-
-      document.body.appendChild(heart);
-
-      requestAnimationFrame(() => {
-        heart.style.transform = 'scale(1.4) translateY(-60px)';
-        heart.style.opacity = '0';
-      });
-
-      setTimeout(() => heart.remove(), 600);
-    }
-
+    /* --- TOI UU HOA HIEU SUAT RENDER MESSAGE (TRA TRANH DOM REPAINT NHIEU LAN, TANG TOC XU LY) --- */
     function renderMessage(msg) {
-      const isMe = msg.sender_id === currentProfile.id;
-      const wrap = document.createElement('div');
-      wrap.className = `msg-wrapper ${isMe ? 'sent' : 'received'}`; wrap.id = `msg-${msg.id}`;
-
-      const senderName = isMe ? "Bạn" : document.getElementById('chat-room-name').textContent;
-      let pureContent = msg.content || "";
-      if(pureContent.startsWith("[REPLY:")) pureContent = pureContent.substring(pureContent.indexOf("] ") + 2);
+      const area = document.getElementById('messages-area');
+      const isSent = msg.sender_id === currentProfile.id;
+      let existingWrapper = document.getElementById(`msg-wrapper-${msg.id}`);
       
-      const isVideoMedia = msg.image_url && msg.image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i);
-      const msgPreview = msg.is_sticker ? "[Sticker]" : (msg.image_url ? (isVideoMedia ? "[Video]" : "[Hình ảnh]") : pureContent);
-
-      let pressTimer; 
-      let startX = 0; 
-      let currentX = 0; 
-      let isSwiping = false; 
-      let lastTap = 0;
-
-      wrap.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        currentX = startX;
-        isSwiping = false;
-        wrap.style.transition = 'none';
-
-        pressTimer = setTimeout(() => {
-          if (!isSwiping && Math.abs(currentX - startX) < 10) showReactionPicker(msg.id);
-        }, 500);
-      }, {passive: true});
-
-      wrap.addEventListener('touchmove', (e) => {
-        currentX = e.touches[0].clientX;
-        let diffX = currentX - startX;
-
-        if (Math.abs(diffX) > 10) { clearTimeout(pressTimer); isSwiping = true; }
-        if (isSwiping && Math.abs(diffX) < 90) wrap.style.transform = `translateX(${diffX}px)`;
-      }, {passive: true});
-
-      wrap.addEventListener('touchend', (e) => {
-        clearTimeout(pressTimer);
-        let diffX = currentX - startX;
-
-        wrap.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
-        wrap.style.transform = 'translateX(0)';
-
-        if (isSwiping && Math.abs(diffX) > 50) {
-          setReplyMode(msg.id, senderName, msgPreview);
-          if (navigator.vibrate) navigator.vibrate(40);
-        } else if (!isSwiping) {
-          let currentTime = new Date().getTime();
-          let tapLength = currentTime - lastTap;
-          if (tapLength < 300 && tapLength > 0) {
-            e.preventDefault();
-            const touch = e.changedTouches[0];
-            quickHeartReaction(msg.id, touch ? touch.clientX : window.innerWidth/2, touch ? touch.clientY : window.innerHeight/2);
-          }
-          lastTap = currentTime;
-        }
-      });
-
-      wrap.addEventListener('mousedown', (e) => { pressTimer = setTimeout(() => showReactionPicker(msg.id), 500); });
-      wrap.addEventListener('mouseup', () => clearTimeout(pressTimer));
-      wrap.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-      wrap.ondblclick = (e) => quickHeartReaction(msg.id, e.clientX, e.clientY);
-
-      let replyNodeHTML = ""; let rawContent = msg.content || ""; let rawImgUrl = msg.image_url || "";
-      if(rawContent.startsWith("[REPLY:") || rawImgUrl.startsWith("[REPLY:")) {
-        let targetString = rawContent.startsWith("[REPLY:") ? rawContent : rawImgUrl;
-        let targetId = targetString.substring(7, targetString.indexOf("]"));
-        replyNodeHTML = `<div class="msg-reply-node" onclick="jumpToMessage('${targetId}')">➦ Đang trả lời tin nhắn #${targetId} (Nhấn để xem)</div>`;
-        if(rawContent.startsWith("[REPLY:")) rawContent = rawContent.substring(rawContent.indexOf("] ") + 2);
-        if(rawImgUrl.startsWith("[REPLY:")) rawImgUrl = rawImgUrl.substring(rawImgUrl.indexOf("]") + 1);
-      }
-
+      const rawContent = msg.content || "";
+      const rawImgUrl = msg.image_url || "";
+      
       let mainContentHTML = "";
       if (msg.is_sticker) {
         mainContentHTML = `<img class="msg-bubble msg-sticker" src="${rawContent}">`;
       } else if (rawImgUrl) {
         if (rawImgUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i)) {
-          mainContentHTML = `<video class="msg-video" src="${rawImgUrl}" controls playsinline preload="metadata"></video>`;
+          mainContentHTML = `
+            <div style="position: relative; display: inline-block; cursor: pointer; margin-top: 5px;" onclick="openVideoViewer('${rawImgUrl}')">
+              <video class="msg-video" src="${rawImgUrl}" playsinline preload="metadata" style="pointer-events: none; margin-top: 0;"></video>
+              <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.5); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; border: 2px solid rgba(255,255,255,0.8); backdrop-filter: blur(4px);">▶</div>
+            </div>`;
         } else {
           mainContentHTML = `<img class="msg-img" src="${rawImgUrl}" onclick="openImageViewer('${rawImgUrl}')">`;
         }
@@ -1536,101 +1361,218 @@
         mainContentHTML = `<div class="msg-bubble">${rawContent}</div>`;
       }
 
-      let reactionHTML = msg.reaction ? `<div class="reaction-badge">${msg.reaction}</div>` : '';
-      
-      const createdTime = new Date(msg.created_at || Date.now()).getTime();
-      const expiresTime = createdTime + (24 * 60 * 60 * 1000);
-      
-      let statusHtml = '';
-      if (isMe) {
-        statusHtml = `<span class="msg-status" id="status-${msg.id}">${msg.is_read ? 'Đã xem 👁️' : 'Đã gửi ✓'}</span>`;
+      let replyHTML = "";
+      if (msg.reply_to_id) {
+        let r_text = "[Tin nhắn đã thu hồi/hết hạn]";
+        const r_node = document.getElementById(`msg-wrapper-${msg.reply_to_id}`);
+        if(r_node) {
+          const contentNode = r_node.querySelector('.msg-bubble');
+          const imgNode = r_node.querySelector('.msg-img');
+          const vidNode = r_node.querySelector('.msg-video');
+          
+          if(r_node.querySelector('.msg-sticker')) r_text = "[Sticker]";
+          else if(imgNode) r_text = "[Hình ảnh]";
+          else if(vidNode) r_text = "[Video]";
+          else if(contentNode) r_text = contentNode.textContent;
+        }
+        replyHTML = `<div class="msg-reply-node" onclick="scrollToMsg('${msg.reply_to_id}')">↪ ${r_text}</div>`;
+      }
+
+      let innerHtml = `
+        ${replyHTML}
+        ${mainContentHTML}
+        ${msg.reaction ? `<div class="reaction-badge">${msg.reaction}</div>` : ''}
+        <div class="msg-meta">
+           <span class="msg-countdown">⏳ ${getTimeLeft(msg.created_at)}</span>
+           ${isSent ? `<span class="msg-status">${msg.is_read ? 'Đã xem' : 'Đã gửi'}</span>` : ''}
+        </div>
+      `;
+
+      if (existingWrapper) {
+        existingWrapper.innerHTML = innerHtml;
+        existingWrapper.onclick = () => openReactionPicker(msg.id, existingWrapper);
+        existingWrapper.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl);
+      } else {
+        const div = document.createElement('div');
+        div.className = `msg-wrapper ${isSent ? 'sent' : 'received'}`;
+        div.id = `msg-wrapper-${msg.id}`;
+        div.innerHTML = innerHtml;
+        div.onclick = () => openReactionPicker(msg.id, div);
+        div.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl);
+        area.appendChild(div);
+      }
+    }
+
+    function scrollToMsg(id) {
+      const el = document.getElementById(`msg-wrapper-${id}`);
+      if(el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function scrollToBottom() {
+      const area = document.getElementById('messages-area');
+      area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+    }
+    
+    function getTimeLeft(created_at) {
+      const diff = 24 * 60 * 60 * 1000 - (Date.now() - new Date(created_at).getTime());
+      if (diff <= 0) return '0h';
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      return `${h}h`;
+    }
+
+    let activeReactionMsgId = null;
+    function openReactionPicker(msgId, el) {
+      activeReactionMsgId = msgId; 
+      const overlay = document.getElementById('reaction-overlay');
+      const box = document.getElementById('reaction-box');
+      const rect = el.getBoundingClientRect();
+      box.style.position = 'absolute'; box.style.top = `${rect.top - 70}px`; box.style.left = `${rect.left}px`;
+      if(rect.left > window.innerWidth / 2) box.style.left = `${rect.right - box.offsetWidth}px`;
+      overlay.classList.add('active');
+    }
+
+    function closeReactionPicker(e) { if(e.target.id === 'reaction-overlay') document.getElementById('reaction-overlay').classList.remove('active'); }
+
+    async function submitReaction(emoji) {
+      if(!activeReactionMsgId) return;
+      document.getElementById('reaction-overlay').classList.remove('active');
+      const { error } = await mySupabaseClient.from('messages').update({ reaction: emoji }).eq('id', activeReactionMsgId);
+      if(!error) {
+        const badge = document.querySelector(`#msg-wrapper-${activeReactionMsgId} .reaction-badge`);
+        if(badge) badge.textContent = emoji;
+        else {
+           const wrap = document.getElementById(`msg-wrapper-${activeReactionMsgId}`);
+           if(wrap) {
+             const b = document.createElement('div'); b.className = 'reaction-badge'; b.textContent = emoji;
+             wrap.appendChild(b);
+           }
+        }
+      }
+    }
+
+    function toggleStickers() { document.getElementById('sticker-panel').classList.toggle('active'); }
+    async function sendSticker(url) {
+      if(!activeFriendId) return;
+      document.getElementById('sticker-panel').classList.remove('active');
+      const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, content: url, is_sticker: true };
+      if(replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
+      const { data, error } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
+      if(data) { renderMessage(data); scrollToBottom(); }
+    }
+
+    document.getElementById('chat-form').onsubmit = async (e) => {
+      e.preventDefault(); 
+      const input = document.getElementById('message-input'); 
+      const text = input.value.trim();
+      if (!text || !activeFriendId) return;
+      input.value = ''; document.getElementById('sticker-panel').classList.remove('active');
+      const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, content: text };
+      if(replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
+      const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
+      if (data) { renderMessage(data); scrollToBottom(); }
+    };
+
+    function triggerUpload() { document.getElementById('file-upload').click(); }
+    
+    async function uploadMedia(e) {
+      let file = e.target.files[0]; 
+      if (!file || !activeFriendId) return;
+  
+      if (file.type.startsWith('image/')) {
+        file = await compressImage(file, 1280, 0.75);
+      } else if (file.type.startsWith('video/')) {
+        file = await compressVideo(file, 720, 1000000); 
       }
       
-      let metaHTML = `
-        <div class="msg-meta">
-          <span class="msg-countdown" data-expires="${expiresTime}">⏳ --:--</span>
-          ${statusHtml}
-        </div>`;
+      const fileExt = file.name.split('.').pop(); 
+      const fileName = `chat_${Date.now()}.${fileExt}`;
+      
+      showAppNotification('Đang gửi...', `Đang xử lý & gửi ${file.type.startsWith('image/') ? 'ảnh' : 'video'} lên máy chủ`);
 
-      wrap.innerHTML = replyNodeHTML + mainContentHTML + reactionHTML + metaHTML;
-      const area = document.getElementById('messages-area'); area.appendChild(wrap); area.scrollTop = area.scrollHeight;
+      const { error: upErr } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
+      if (upErr) { await showAppModal("Lỗi tải lên", upErr.message); return; }
+      const url = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
+
+      const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: url };
+      if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
+      const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
+      if (data) { renderMessage(data); scrollToBottom(); showAppNotification('Thành công', 'Đã gửi file xong!'); }
+    }
+
+    async function sendFriendRequest() {
+      const searchTxt = document.getElementById('friend-search').value.trim(); 
+      if (!searchTxt.includes('#')) { await showAppModal("Lỗi", "Nhập đúng định dạng Tên#1234 nha!"); return; }
+      const [uName, uTag] = searchTxt.split('#');
+
+      const { data: target } = await mySupabaseClient.from('profiles').select('id').eq('username', uName).eq('tag', uTag).single();
+      if (!target) { await showAppModal("Lỗi", "Không tìm thấy ai tên này, kiểm tra lại số tag nha!"); return; }
+      if (target.id === currentProfile.id) { await showAppModal("Hì", "Bạn không thể tự kết bạn với chính mình!"); return; }
+  
+      const { data: exist } = await mySupabaseClient.from('friends').select('id')
+        .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${target.id}),and(sender_id.eq.${target.id},receiver_id.eq.${currentProfile.id})`).single();
+      
+      if (exist) { await showAppModal("Lỗi", "Đã gửi lời mời hoặc đã là bạn bè rồi!"); return; }
+      
+      const { error } = await mySupabaseClient.from('friends').insert([{ sender_id: currentProfile.id, receiver_id: target.id, status: 'pending' }]);
+      if (error) { await showAppModal("Lỗi", error.message); } 
+      else { await showAppModal("Xong!", "Đã gửi lời mời kết bạn thành công!"); document.getElementById('friend-search').value = ''; loadFriendsData(); }
+    }
+
+    async function respondRequest(relId, status) {
+      if (status === 'accepted') { await mySupabaseClient.from('friends').update({ status }).eq('id', relId); } 
+      else { await mySupabaseClient.from('friends').delete().eq('id', relId); }
+      loadFriendsData();
     }
 
     function subscribeToChanges() {
-      mySupabaseClient.channel('public:messages').on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
-          if(payload.eventType === 'INSERT') {
-            const m = payload.new;
-            if (m.receiver_id === currentProfile.id) {
-              if (activeFriendId === m.sender_id) {
-                mySupabaseClient.from('messages').update({ is_read: true }).eq('id', m.id);
-                m.is_read = true;
-                renderMessage(m);
-                updateCountdowns();
-              } else {
-                const sender = friendsList.find(f => f.id === m.sender_id);
-                const name = getFriendDisplayName(m.sender_id, sender ? sender.username : "Bạn bè");
-                let displayTxt = m.content;
-                if(displayTxt && displayTxt.startsWith("[REPLY:")) displayTxt = displayTxt.substring(displayTxt.indexOf("] ") + 2);
-                
-                const isVideo = m.image_url && m.image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i);
-                showAppNotification(`Tin nhắn từ ${name}`, m.is_sticker ? '[Sticker]' : (m.image_url ? (isVideo ? '[Video]' : '[Hình ảnh]') : displayTxt));
-              }
-            } else if (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId) {
-              renderMessage(m);
-              updateCountdowns();
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            const m = payload.new;
-            if(activeFriendId) {
-              const el = document.getElementById(`msg-${m.id}`);
-              if(el) {
-                if (m.reaction) {
-                  let badge = el.querySelector('.reaction-badge');
-                  if(!badge) { badge = document.createElement('div'); badge.className = 'reaction-badge'; el.appendChild(badge); }
-                  badge.textContent = m.reaction;
-                }
-                if (m.is_read) {
-                  const statusEl = document.getElementById(`status-${m.id}`);
-                  if(statusEl) statusEl.textContent = 'Đã xem 👁️';
-                }
-              }
+      mySupabaseClient.channel('realtime_msg')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+          const msg = payload.new;
+          if (activeFriendId && ((msg.sender_id === activeFriendId && msg.receiver_id === currentProfile.id) || (msg.sender_id === currentProfile.id && msg.receiver_id === activeFriendId))) {
+            if(msg.receiver_id === currentProfile.id) { mySupabaseClient.from('messages').update({is_read: true}).eq('id', msg.id).then(()=>{}); msg.is_read = true; }
+            renderMessage(msg); scrollToBottom();
+          } else if (msg.receiver_id === currentProfile.id) {
+            const sender = friendsList.find(f => f.id === msg.sender_id);
+            if(sender) {
+              const lang = localStorage.getItem('boba_lang') || 'vi';
+              let nt = lang === 'en' ? 'New Message' : 'Tin nhắn mới';
+              let text = msg.content;
+              if (msg.is_sticker) text = '[Sticker]';
+              else if (msg.image_url) text = msg.image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? '[Video]' : (lang === 'en' ? '[Image]' : '[Hình ảnh]');
+              showAppNotification(nt + ` từ ${sender.username}`, text); 
+              
+              const elMsgBox = document.getElementById(`last-msg-${msg.sender_id}`);
+              if(elMsgBox) { elMsgBox.textContent = text; elMsgBox.style.fontWeight = 'bold'; }
             }
           }
-        }).subscribe();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, payload => {
+          if (activeFriendId) {
+             const m = payload.new;
+             if((m.sender_id === activeFriendId && m.receiver_id === currentProfile.id) || (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId)) {
+                renderMessage(m);
+             }
+          }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friends' }, () => { loadFriendsData(); })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'friends' }, () => { loadFriendsData(); })
+        .subscribe();
     }
 
-    function updateCountdowns() {
-      const countdowns = document.querySelectorAll('.msg-countdown');
-      const now = Date.now();
-      
-      countdowns.forEach(el => {
-        const expires = parseInt(el.getAttribute('data-expires'));
-        const diff = expires - now;
-        
-        if (diff <= 0) {
-          const wrapper = el.closest('.msg-wrapper');
-          if (wrapper) wrapper.style.display = 'none';
-        } else {
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          el.textContent = `⏳ ${hours}h ${mins}m`;
-        }
-      });
-    }
-
-    setInterval(updateCountdowns, 60000);
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      const { data: { session } } = await mySupabaseClient.auth.getSession();
-      if (session) {
-        currentUser = session.user;
-        await loadApp();
-      } else {
-        document.getElementById('auth-screen').classList.add('active');
-        document.getElementById('main-screen').classList.remove('active');
+    setInterval(() => {
+      if (document.getElementById('chat-room').classList.contains('active')) {
+        document.querySelectorAll('.msg-countdown').forEach(el => {
+          const wrap = el.closest('.msg-wrapper');
+          if(wrap) { const id = wrap.id.replace('msg-wrapper-',''); const { data } = mySupabaseClient.from('messages').select('created_at').eq('id', id).single().then(res => { if(res.data) el.textContent = `⏳ ${getTimeLeft(res.data.created_at)}`; }); }
+        });
       }
+    }, 60000);
+
+    mySupabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) { currentUser = session.user; loadApp(); } 
+      else { document.getElementById('auth-screen').classList.add('active'); applySettings(); }
     });
-    
+
   </script>
 </body>
 </html>
