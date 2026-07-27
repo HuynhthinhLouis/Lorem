@@ -168,9 +168,9 @@
     .rank-badge { font-size: 0.75rem; color: white; padding: 3px 8px; border-radius: 12px; font-weight: 800; margin-left: 8px; vertical-align: middle; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
     /* Tabs & Nav */
-    .tab-content { flex: 1; overflow-y: auto; padding-bottom: 90px; }
-    .tab-pane { display: none; flex-direction: column; }
+    .tab-pane { display: none; flex-direction: column; height: 100%; overflow: hidden; }
     .tab-pane.active { display: flex; }
+    .tab-content { flex: 1; overflow-y: auto; padding-bottom: 100px; -webkit-overflow-scrolling: touch; }
     
     .bottom-nav { position: absolute; bottom: 0; width: 100%; height: 75px; background: var(--bg-glass-heavy); backdrop-filter: blur(12px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); border-radius: 24px 24px 0 0; box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.08); z-index: 20;}
     .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-light); font-weight: 700; font-size: 0.8rem; gap: 4px; cursor: pointer; flex: 1; padding: 10px 0; transition: all 0.3s;}
@@ -301,6 +301,16 @@
     .log-item.error { color: #d9534f; font-weight: bold; }
     .log-time { color: #777; font-size: 0.75rem; margin-right: 8px; }
     
+    /* Tùy chỉnh thanh cuộn (Scrollbar) cho hiện đại */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(212, 163, 115, 0.4); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+    /* Thêm hiệu ứng nổi mềm mại khi tương tác với bong bóng chat */
+    .msg-bubble, .msg-img { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .msg-bubble:hover, .msg-img:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08) !important; }
+
   </style>
 </head>
 <body>
@@ -511,7 +521,7 @@
 
       <div class="chat-input-area">
         <button class="icon-btn" onclick="triggerUpload()">📷</button>
-        <input type="file" id="file-upload" accept="image/*;capture=camera" style="display: none;" onchange="uploadImage(event)">
+        <input type="file" id="file-upload" accept="image/*" capture="environment" style="display: none;" onchange="uploadImage(event)">
         
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
         
@@ -1190,16 +1200,50 @@
     }
 
     async function uploadImage(e) {
-      const file = e.target.files[0]; if(!file || !activeFriendId) return;
-      showAppNotification('Đang gửi...', 'Hình ảnh đang tải lên');
-      const fileName = `${Date.now()}.${file.name.split('.').pop()}`;
-      const { error } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
-      if(error) { await showAppModal("Lỗi tải ảnh", error.message); return; }
-      const imgUrl = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
+      const file = e.target.files[0]; 
+      if(!file || !activeFriendId) return;
       
-      let finalImgUrl = imgUrl;
-      if(replyingMessageId) { finalImgUrl = `[REPLY:${replyingMessageId}]` + imgUrl; cancelReplyMode(); }
-      await mySupabaseClient.from('messages').insert([{ sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: finalImgUrl }]);
+      showAppNotification('Đang gửi...', 'Hình ảnh đang tải lên ⏳');
+      
+      let fileExt = 'jpg'; 
+      if (file.name.includes('.')) {
+        fileExt = file.name.split('.').pop();
+      } else if (file.type) {
+        fileExt = file.type.split('/').pop();
+      }
+      
+      const fileName = `img_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+      
+      try {
+        const { error } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
+        if(error) { 
+          await showAppModal("Lỗi tải ảnh", error.message); 
+          e.target.value = ''; 
+          return; 
+        }
+        
+        const imgUrl = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
+        
+        let finalImgUrl = imgUrl;
+        if(replyingMessageId) { 
+          finalImgUrl = `[REPLY:${replyingMessageId}]` + imgUrl; 
+          cancelReplyMode(); 
+        }
+        
+        const { error: dbError } = await mySupabaseClient.from('messages').insert([{ 
+          sender_id: currentProfile.id, 
+          receiver_id: activeFriendId, 
+          image_url: finalImgUrl 
+        }]);
+        
+        if (dbError) {
+          await showAppModal("Lỗi gửi tin", dbError.message);
+        }
+      } catch (err) {
+        console.error("Upload error: ", err);
+      } finally {
+        e.target.value = ''; 
+      }
     }
 
     async function respondRequest(relId, status) {
