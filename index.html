@@ -300,7 +300,7 @@
     .log-item.warn { color: #f0ad4e; }
     .log-item.error { color: #d9534f; font-weight: bold; }
     .log-time { color: #777; font-size: 0.75rem; margin-right: 8px; }
-    
+
     /* Tùy chỉnh thanh cuộn (Scrollbar) cho hiện đại */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -521,7 +521,7 @@
 
       <div class="chat-input-area">
         <button class="icon-btn" onclick="triggerUpload()">📷</button>
-        <input type="file" id="file-upload" accept="image/*" capture="environment" style="display: none;" onchange="uploadImage(event)">
+        <input type="file" id="file-upload" accept="image/*" style="display: none;" onchange="uploadImage(event)">
         
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
         
@@ -1200,29 +1200,50 @@
     }
 
     async function uploadImage(e) {
+      console.log("📸 [START] Hàm uploadImage được gọi");
+      
       const file = e.target.files[0]; 
-      if(!file || !activeFriendId) return;
-      
-      showAppNotification('Đang gửi...', 'Hình ảnh đang tải lên ⏳');
-      
-      let fileExt = 'jpg'; 
-      if (file.name.includes('.')) {
-        fileExt = file.name.split('.').pop();
-      } else if (file.type) {
-        fileExt = file.type.split('/').pop();
+      if(!file) {
+        console.warn("⚠️ Không tìm thấy file trong sự kiện (Có thể người dùng hủy chọn)");
+        return; 
+      }
+      if(!activeFriendId) {
+        console.warn("⚠️ Chưa có activeFriendId (Chưa mở khung chat)");
+        return;
       }
       
-      const fileName = `img_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+      showAppNotification('Đang xử lý...', 'Hình ảnh đang chuẩn bị gửi ⏳');
+      
+      let fileExt = 'jpg'; 
+      if (file.name && file.name.includes('.')) {
+        fileExt = file.name.split('.').pop().replace(/[^a-zA-Z0-9]/g, '');
+      } else if (file.type) {
+        fileExt = file.type.split('/').pop().replace(/[^a-zA-Z0-9]/g, '');
+      }
+      
+      const fileName = `img_${currentProfile.id}_${Date.now()}.${fileExt}`;
+      console.log(`🚀 [UPLOAD] Bắt đầu đẩy lên Supabase: ${fileName} (Kích thước: ${(file.size/1024/1024).toFixed(2)} MB)`);
       
       try {
-        const { error } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
+        const { data, error } = await mySupabaseClient.storage
+          .from('chat_images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
         if(error) { 
-          await showAppModal("Lỗi tải ảnh", error.message); 
+          console.error("❌ [LỖI STORAGE]:", error.message);
+          await showAppModal("Lỗi tải ảnh lên", error.message || "Không thể tải lên máy chủ"); 
           e.target.value = ''; 
           return; 
         }
         
-        const imgUrl = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
+        console.log("✅ [SUCCESS] Ảnh đã lên Bucket Storage:", data);
+
+        const { data: publicUrlData } = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName);
+        const imgUrl = publicUrlData.publicUrl;
+        console.log("🔗 [URL ANH]:", imgUrl);
         
         let finalImgUrl = imgUrl;
         if(replyingMessageId) { 
@@ -1230,17 +1251,24 @@
           cancelReplyMode(); 
         }
         
-        const { error: dbError } = await mySupabaseClient.from('messages').insert([{ 
+        console.log("💾 [DB] Đang ghi tin nhắn vào Database...");
+        
+        const { data: dbData, error: dbError } = await mySupabaseClient.from('messages').insert([{ 
           sender_id: currentProfile.id, 
           receiver_id: activeFriendId, 
           image_url: finalImgUrl 
         }]);
         
         if (dbError) {
+          console.error("❌ [LỖI DB INSERT]:", dbError.message);
           await showAppModal("Lỗi gửi tin", dbError.message);
+        } else {
+          console.log("🎉 [HOÀN TẤT] Tin nhắn ảnh đã được gửi thành công!");
         }
+
       } catch (err) {
-        console.error("Upload error: ", err);
+        console.error("🚨 [NGOẠI LỆ HỆ THỐNG]:", err.message || err);
+        await showAppModal("Lỗi không xác định", err.message || "Vui lòng thử lại sau");
       } finally {
         e.target.value = ''; 
       }
