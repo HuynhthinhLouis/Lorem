@@ -635,18 +635,18 @@
         </div>
       `;
       container.appendChild(toast);
+      
       setTimeout(() => {
         toast.style.animation = 'slideDown 0.5s cubic-bezier(0.25, 1, 0.5, 1) reverse forwards';
         setTimeout(() => toast.remove(), 500);
       }, 3000);
-      if (window.AndroidBridge) {
-        window.AndroidBridge.showNativeNotification(title, msg);
-      }
+
+      // Đã sửa lại biến 'message' thành 'msg' ở khối lệnh bên dưới
       if (window.AndroidBridge && typeof window.AndroidBridge.showNativeNotification === 'function') {
-        window.AndroidBridge.showNativeNotification(title, message);
+        window.AndroidBridge.showNativeNotification(title, msg);
       } else {
-        console.log("🔔 Web Notification: ", title, message);
-    } 
+        console.log("🔔 Web Notification: ", title, msg);
+      } 
     }
 
     async function updateSettings() {
