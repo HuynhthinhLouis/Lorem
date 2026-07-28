@@ -573,7 +573,6 @@
         <div class="sticker-grid-content" id="sticker-grid-content"></div>
       </div>
 
-      <!-- TỐI ƯU GIAO DIỆN KHU VỰC NHẬP TIN NHẮN -->
       <div class="chat-input-area">
         <button class="icon-btn" onclick="triggerUpload()">📷</button>
         <input type="file" id="file-upload" accept="image/*,video/*" style="display: none;" onchange="uploadMedia(event)">
@@ -582,7 +581,7 @@
         
         <button class="icon-btn" id="voice-btn" onclick="toggleVoiceRecord()" title="Ghi âm">🎤</button>
         
-        <form id="chat-form" style="display: flex; flex: 1; gap: 8px;">
+        <form id="chat-form" style="display: flex; flex: 1; gap: 8px; min-width: 0;">
           <input type="text" id="message-input" placeholder="Aa..." autocomplete="off">
           <button type="submit">➤</button>
         </form>
@@ -839,7 +838,7 @@
     let replyingMessageId = null;
     let registerAvatarFile = null;
 
-    // --- TÍNH NĂNG GHI ÂM (VOICE MESSAGE) ---
+    // --- TÍNH NĂNG GHI ÂM ĐÃ ĐƯỢC NÂNG CẤP CHẤT LƯỢNG ---
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
@@ -849,8 +848,28 @@
       
       if (!isRecording) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          mediaRecorder = new MediaRecorder(stream);
+          // Bổ sung các thông số giúp tăng chất lượng lọc ồn và đầu vào mic
+          const audioConstraints = {
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 48000,
+              channelCount: 2
+            }
+          };
+
+          const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+          
+          // Tăng Bitrate lên 128kbps để tránh bị rè và nén quá đà
+          let options = { audioBitsPerSecond: 128000 };
+          
+          // Kiểm tra và sử dụng chuẩn Opus (âm thanh chất lượng cao của webm) nếu trình duyệt có hỗ trợ
+          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            options.mimeType = 'audio/webm;codecs=opus';
+          }
+          
+          mediaRecorder = new MediaRecorder(stream, options);
           audioChunks = [];
           
           mediaRecorder.ondataavailable = e => {
@@ -858,7 +877,9 @@
           };
           
           mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            // Đảm bảo tạo định dạng chính xác từ chunk đã ghi
+            const mime = mediaRecorder.mimeType || 'audio/webm';
+            const audioBlob = new Blob(audioChunks, { type: mime });
             stream.getTracks().forEach(track => track.stop()); 
             await uploadVoice(audioBlob);
           };
