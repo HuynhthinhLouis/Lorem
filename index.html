@@ -269,6 +269,32 @@
     .chat-input-area button[type="submit"] { background: var(--primary); color: white; border: none; width: 46px; height: 46px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 4px 10px rgba(212, 163, 115, 0.4); transition: transform 0.2s;}
     .chat-input-area button[type="submit"]:active { transform: scale(0.9); }
     
+    /* Animation khi đang ghi âm */
+    .icon-btn.recording {
+      background: #ff4d4d;
+      color: white;
+      border-color: #ff4d4d;
+      animation: pulseRecording 1.5s infinite;
+    }
+    @keyframes pulseRecording {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
+    }
+
+    /* Style cho trình phát audio trong tin nhắn */
+    .msg-audio {
+      max-width: 220px;
+      height: 44px;
+      margin-top: 5px;
+      border-radius: 22px;
+      outline: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .msg-wrapper.sent .msg-audio {
+      background: var(--bubble-sent);
+    }
+    
     /* Sticker Panel */
     .sticker-panel { display: none; position: absolute; bottom: 85px; left: 15px; right: 15px; background: var(--bg-glass-heavy); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 -10px 30px rgba(0,0,0,0.12); flex-direction: column; height: 280px; z-index: 60; overflow: hidden; }
     .sticker-panel.active { display: flex; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -322,8 +348,8 @@
     ::-webkit-scrollbar-thumb { background: rgba(212, 163, 115, 0.4); border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-    .msg-bubble, .msg-img, .msg-video { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .msg-bubble:hover, .msg-img:hover, .msg-video:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08) !important; }
+    .msg-bubble, .msg-img, .msg-video, .msg-audio { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .msg-bubble:hover, .msg-img:hover, .msg-video:hover, .msg-audio:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08) !important; }
 
   </style>
 </head>
@@ -551,6 +577,9 @@
         <input type="file" id="file-upload" accept="image/*,video/*" style="display: none;" onchange="uploadMedia(event)">
         
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
+        
+        <!-- NÚT GHI ÂM MỚI THÊM -->
+        <button class="icon-btn" id="voice-btn" onclick="toggleVoiceRecord()" title="Ghi âm">🎤</button>
         
         <form id="chat-form" style="display: flex; flex: 1; gap: 8px;">
           <input type="text" id="message-input" placeholder="Aa..." autocomplete="off">
@@ -808,6 +837,73 @@
     let appFunctionsList = [];
     let replyingMessageId = null;
     let registerAvatarFile = null;
+
+    // --- TÍNH NĂNG GHI ÂM (VOICE MESSAGE) ---
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+
+    async function toggleVoiceRecord() {
+      const voiceBtn = document.getElementById('voice-btn');
+      
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+          
+          mediaRecorder.ondataavailable = e => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+          
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            stream.getTracks().forEach(track => track.stop()); 
+            await uploadVoice(audioBlob);
+          };
+          
+          mediaRecorder.start();
+          isRecording = true;
+          voiceBtn.classList.add('recording');
+          voiceBtn.textContent = '⏹️'; 
+          showAppNotification('Đang ghi âm...', 'Nhấn nút vuông để kết thúc và gửi 🎙️');
+          
+        } catch (err) {
+          console.error("Lỗi truy cập Micro:", err);
+          showAppModal("Lỗi", "Không thể truy cập micro. Hãy kiểm tra quyền cấp cho trình duyệt!");
+        }
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        voiceBtn.classList.remove('recording');
+        voiceBtn.textContent = '🎤';
+      }
+    }
+
+    async function uploadVoice(blob) {
+      if (!activeFriendId) return;
+      
+      showAppNotification('Đang gửi...', 'Đang tải tin nhắn thoại lên máy chủ 🚀');
+      const fileName = `voice_${Date.now()}.webm`;
+      
+      const { error: upErr } = await mySupabaseClient.storage.from('chat_images').upload(fileName, blob);
+      if (upErr) { 
+        await showAppModal("Lỗi tải lên", upErr.message); 
+        return; 
+      }
+      
+      const url = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
+      
+      const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, audio_url: url };
+      if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
+      
+      const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
+      if (data) { 
+        renderMessage(data); 
+        scrollToBottom(); 
+        showAppNotification('Thành công', 'Đã gửi tin nhắn thoại!'); 
+      }
+    }
 
     /* --- HAM NEN ANH BROWSER --- */
     async function compressImage(file, maxWidth = 1280, quality = 0.75) {
@@ -1230,10 +1326,8 @@
         return;
       }
 
-      // Lấy danh sách toàn bộ friend IDs
       const friendIds = relations.map(r => r.sender_id === currentProfile.id ? r.receiver_id : r.sender_id);
       
-      // Truy vấn 1 lần lấy toàn bộ profiles của bạn bè
       const { data: friendProfiles } = await mySupabaseClient.from('profiles')
         .select('*, ranks(name, color)')
         .in('id', friendIds);
@@ -1261,7 +1355,7 @@
           accList.innerHTML += `<div class="friend-item"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div></div></div>`;
             
           const { data: lastMsg } = await mySupabaseClient.from('messages')
-            .select('content, is_sticker, image_url')
+            .select('content, is_sticker, image_url, audio_url')
             .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fProfile.id}),and(sender_id.eq.${fProfile.id},receiver_id.eq.${currentProfile.id})`)
             .order('created_at', { ascending: false }).limit(1);
 
@@ -1270,7 +1364,8 @@
             if(lastMsg[0].is_sticker) text = '[Sticker]'; 
             else if(lastMsg[0].image_url) {
               text = lastMsg[0].image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? '[Video]' : (lang === 'en' ? '[Image]' : '[Hình ảnh]');
-            } 
+            }
+            else if(lastMsg[0].audio_url) text = lang === 'en' ? '[Voice Message 🎤]' : '[Tin nhắn thoại 🎤]'; 
             else text = lastMsg[0].content;
           }
           chatList.innerHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}', '${friendColor}', '${fProfile.ranks ? fProfile.ranks.name : ''}', '${fProfile.avatar_url || ''}')"><img class="avatar" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
@@ -1319,12 +1414,13 @@
 
     function closeChat() { document.getElementById('chat-room').classList.remove('active'); activeFriendId = null; cancelReplyMode(); }
 
-    function replyToMessage(msgId, content, isSticker, imgUrl) {
+    function replyToMessage(msgId, content, isSticker, imgUrl, audioUrl) {
       replyingMessageId = msgId;
       document.getElementById('reply-preview-container').style.display = 'flex';
       let previewText = content;
       if (isSticker) previewText = "[Sticker]";
       else if (imgUrl) previewText = imgUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? "[Video]" : "[Hình ảnh]";
+      else if (audioUrl) previewText = "[Tin nhắn thoại 🎤]";
       document.getElementById('reply-preview-content').textContent = "Đang trả lời: " + previewText;
       document.getElementById('message-input').focus();
     }
@@ -1343,6 +1439,7 @@
       
       const rawContent = msg.content || "";
       const rawImgUrl = msg.image_url || "";
+      const rawAudioUrl = msg.audio_url || ""; 
       
       let mainContentHTML = "";
       if (msg.is_sticker) {
@@ -1357,6 +1454,8 @@
         } else {
           mainContentHTML = `<img class="msg-img" src="${rawImgUrl}" onclick="openImageViewer('${rawImgUrl}')">`;
         }
+      } else if (rawAudioUrl) {
+        mainContentHTML = `<audio class="msg-audio" src="${rawAudioUrl}" controls controlsList="nodownload"></audio>`;
       } else {
         mainContentHTML = `<div class="msg-bubble">${rawContent}</div>`;
       }
@@ -1369,10 +1468,12 @@
           const contentNode = r_node.querySelector('.msg-bubble');
           const imgNode = r_node.querySelector('.msg-img');
           const vidNode = r_node.querySelector('.msg-video');
+          const audioNode = r_node.querySelector('.msg-audio');
           
           if(r_node.querySelector('.msg-sticker')) r_text = "[Sticker]";
           else if(imgNode) r_text = "[Hình ảnh]";
           else if(vidNode) r_text = "[Video]";
+          else if(audioNode) r_text = "[Tin nhắn thoại 🎤]";
           else if(contentNode) r_text = contentNode.textContent;
         }
         replyHTML = `<div class="msg-reply-node" onclick="scrollToMsg('${msg.reply_to_id}')">↪ ${r_text}</div>`;
@@ -1391,14 +1492,14 @@
       if (existingWrapper) {
         existingWrapper.innerHTML = innerHtml;
         existingWrapper.onclick = () => openReactionPicker(msg.id, existingWrapper);
-        existingWrapper.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl);
+        existingWrapper.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl, rawAudioUrl);
       } else {
         const div = document.createElement('div');
         div.className = `msg-wrapper ${isSent ? 'sent' : 'received'}`;
         div.id = `msg-wrapper-${msg.id}`;
         div.innerHTML = innerHtml;
         div.onclick = () => openReactionPicker(msg.id, div);
-        div.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl);
+        div.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl, rawAudioUrl);
         area.appendChild(div);
       }
     }
@@ -1539,6 +1640,7 @@
               let text = msg.content;
               if (msg.is_sticker) text = '[Sticker]';
               else if (msg.image_url) text = msg.image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? '[Video]' : (lang === 'en' ? '[Image]' : '[Hình ảnh]');
+              else if (msg.audio_url) text = lang === 'en' ? '[Voice Message 🎤]' : '[Tin nhắn thoại 🎤]';
               showAppNotification(nt + ` từ ${sender.username}`, text); 
               
               const elMsgBox = document.getElementById(`last-msg-${msg.sender_id}`);
