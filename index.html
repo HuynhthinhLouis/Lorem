@@ -578,7 +578,7 @@
         
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
         
-        <!-- NÚT GHI ÂM MỚI THÊM -->
+        <!-- NÚT GHI ÂM -->
         <button class="icon-btn" id="voice-btn" onclick="toggleVoiceRecord()" title="Ghi âm">🎤</button>
         
         <form id="chat-form" style="display: flex; flex: 1; gap: 8px;">
@@ -729,7 +729,7 @@
       const videoEl = document.getElementById('video-viewer-vid');
       document.getElementById('video-viewer-modal').classList.remove('active');
       videoEl.pause(); 
-      setTimeout(() => { videoEl.src = ''; }, 300); // Dọn source sau khi ẩn mượt
+      setTimeout(() => { videoEl.src = ''; }, 300); 
     }
 
     async function updateSettings() {
@@ -886,13 +886,14 @@
       showAppNotification('Đang gửi...', 'Đang tải tin nhắn thoại lên máy chủ 🚀');
       const fileName = `voice_${Date.now()}.webm`;
       
-      const { error: upErr } = await mySupabaseClient.storage.from('chat_images').upload(fileName, blob);
+      // Upload vào bucket chat_audio
+      const { error: upErr } = await mySupabaseClient.storage.from('chat_audio').upload(fileName, blob);
       if (upErr) { 
         await showAppModal("Lỗi tải lên", upErr.message); 
         return; 
       }
       
-      const url = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
+      const url = mySupabaseClient.storage.from('chat_audio').getPublicUrl(fileName).data.publicUrl;
       
       const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, audio_url: url };
       if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
@@ -1579,10 +1580,14 @@
       let file = e.target.files[0]; 
       if (!file || !activeFriendId) return;
   
+      let targetBucket = 'chat_images';
+
       if (file.type.startsWith('image/')) {
         file = await compressImage(file, 1280, 0.75);
+        targetBucket = 'chat_images';
       } else if (file.type.startsWith('video/')) {
         file = await compressVideo(file, 720, 1000000); 
+        targetBucket = 'chat_videos';
       }
       
       const fileExt = file.name.split('.').pop(); 
@@ -1590,9 +1595,10 @@
       
       showAppNotification('Đang gửi...', `Đang xử lý & gửi ${file.type.startsWith('image/') ? 'ảnh' : 'video'} lên máy chủ`);
 
-      const { error: upErr } = await mySupabaseClient.storage.from('chat_images').upload(fileName, file);
+      const { error: upErr } = await mySupabaseClient.storage.from(targetBucket).upload(fileName, file);
       if (upErr) { await showAppModal("Lỗi tải lên", upErr.message); return; }
-      const url = mySupabaseClient.storage.from('chat_images').getPublicUrl(fileName).data.publicUrl;
+      
+      const url = mySupabaseClient.storage.from(targetBucket).getPublicUrl(fileName).data.publicUrl;
 
       const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: url };
       if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
@@ -1616,7 +1622,7 @@
       
       const { error } = await mySupabaseClient.from('friends').insert([{ sender_id: currentProfile.id, receiver_id: target.id, status: 'pending' }]);
       if (error) { await showAppModal("Lỗi", error.message); } 
-      else { await showAppModal("Xong!", "Đã gửi lời mời kết bạn thành công!"); document.getElementById('friend-search').value = ''; loadFriendsData(); }
+      else { await showAppModal("Xong!", "Đã gửi lời mời kết bạn thành thành công!"); document.getElementById('friend-search').value = ''; loadFriendsData(); }
     }
 
     async function respondRequest(relId, status) {
