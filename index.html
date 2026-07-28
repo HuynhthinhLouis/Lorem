@@ -847,7 +847,6 @@
           console.error("🔴 Keep-Alive Error:", err);
         }
       };
-      // Giãn cách ping sau khi app đã load để tránh lag ban đầu
       setTimeout(() => {
           pingDatabase();
           setInterval(pingDatabase, 10 * 60 * 1000);
@@ -867,7 +866,7 @@
     let replyingMessageId = null;
     let registerAvatarFile = null;
 
-    // --- TÍNH NĂNG GHI ÂM (TỐI ĐA CHẤT LƯỢNG & CUSTOM UI) ---
+    // --- TÍNH NĂNG GHI ÂM ---
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
@@ -1026,7 +1025,7 @@
       });
     }
 
-    /* --- HÀM NÉN VIDEO BROWSER (ĐÃ SỬA LỖI MẤT TIẾNG) --- */
+    /* --- HÀM NÉN VIDEO --- */
     async function compressVideo(file, targetWidth = 640, bitrate = 800000) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('video/')) return resolve(file);
@@ -1261,7 +1260,6 @@
     function createBobas() {
       const bg = document.getElementById('boba-bg'); bg.innerHTML = ''; 
       const icons = ['🧋', '🌸', '✨', '🤍', '🍡'];
-      // Đã giảm từ 40 xuống 15 để web mượt mà hơn
       for (let i = 0; i < 15; i++) {
         const icon = document.createElement('div'); icon.className = 'boba-icon-blur';
         icon.innerText = icons[Math.floor(Math.random() * icons.length)];
@@ -1371,7 +1369,14 @@
       applySettings();
 
       document.getElementById('my-name').textContent = currentProfile.username;
+      
+      // -- THÊM TÍNH NĂNG RANK VÀO PROFILE --
+      const myRankBadge = document.getElementById('my-rank');
       if (currentRank) {
+        myRankBadge.style.display = 'inline-block';
+        myRankBadge.style.backgroundColor = currentRank.color || 'var(--primary)';
+        myRankBadge.textContent = currentRank.name;
+        
         const rName = currentRank.name.toLowerCase();
         if (rName.includes('founder') || rName.includes('sáng lập') || rName.includes('admin')) {
           document.getElementById('founder-tools').style.display = 'block';
@@ -1379,6 +1384,7 @@
           document.getElementById('founder-tools').style.display = 'none';
         }
       } else {
+        myRankBadge.style.display = 'none';
         document.getElementById('founder-tools').style.display = 'none';
       }
 
@@ -1504,12 +1510,10 @@
         .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${fid}),and(sender_id.eq.${fid},receiver_id.eq.${currentProfile.id})`)
         .order('created_at', { ascending: true });
 
-      // Gom tin nhắn vào 1 fragment để DOM chỉ phải render 1 lần (Tối ưu Reflow)
       const fragment = document.createDocumentFragment();
       if (msgs) msgs.forEach(m => renderMessage(m, fragment));
       area.appendChild(fragment);
 
-      // Tắt cuộn mượt (smooth=false) để nhảy bụp phát xuống dòng cuối luôn
       scrollToBottom(false);
       
       const elMsgBox = document.getElementById(`last-msg-${fid}`);
@@ -1549,7 +1553,6 @@
         mainContentHTML = `<img class="msg-bubble msg-sticker" src="${rawContent}">`;
       } else if (rawImgUrl) {
         if (rawImgUrl.match(/\.(mp4|webm|mov)(\?.*)?$/i)) {
-          // Thêm #t=0.001 vào src để FIX lỗi trình duyệt di động không tải Thumbnail của Video
           mainContentHTML = `
             <div style="position: relative; display: inline-block; cursor: pointer; margin-top: 5px;" onclick="openVideoViewer('${rawImgUrl}')">
               <video class="msg-video" src="${rawImgUrl}#t=0.001" playsinline preload="metadata" style="pointer-events: none; margin-top: 0;"></video>
@@ -1583,12 +1586,13 @@
         replyHTML = `<div class="msg-reply-node" onclick="scrollToMsg('${msg.reply_to_id}')">↪ ${r_text}</div>`;
       }
 
+      // -- TỐI ƯU GÁN DATA-CREATED-AT ĐỂ TÍNH COUNTDOWN LOCAL --
       let innerHtml = `
         ${replyHTML}
         ${mainContentHTML}
         ${msg.reaction ? `<div class="reaction-badge">${msg.reaction}</div>` : ''}
         <div class="msg-meta">
-           <span class="msg-countdown">⏳ ${getTimeLeft(msg.created_at)}</span>
+           <span class="msg-countdown" data-created-at="${msg.created_at}">⏳ ${getTimeLeft(msg.created_at)}</span>
            ${isSent ? `<span class="msg-status">${msg.is_read ? 'Đã xem' : 'Đã gửi'}</span>` : ''}
         </div>
       `;
@@ -1740,7 +1744,7 @@
           const msg = payload.new;
           if (activeFriendId && ((msg.sender_id === activeFriendId && msg.receiver_id === currentProfile.id) || (msg.sender_id === currentProfile.id && msg.receiver_id === activeFriendId))) {
             if(msg.receiver_id === currentProfile.id) { mySupabaseClient.from('messages').update({is_read: true}).eq('id', msg.id).then(()=>{}); msg.is_read = true; }
-            renderMessage(msg); scrollToBottom(true); // Nhận tin nhắn mới khi đang ở chat thì cứ cuộn mượt
+            renderMessage(msg); scrollToBottom(true);
           } else if (msg.receiver_id === currentProfile.id) {
             const sender = friendsList.find(f => f.id === msg.sender_id);
             if(sender) {
@@ -1770,11 +1774,14 @@
         .subscribe();
     }
 
+    // -- TỐI ƯU INTERVAL ĐẾM NGƯỢC (TÍNH LOCAL KHÔNG CẦN TRUY VẤN DB) --
     setInterval(() => {
       if (document.getElementById('chat-room').classList.contains('active')) {
         document.querySelectorAll('.msg-countdown').forEach(el => {
-          const wrap = el.closest('.msg-wrapper');
-          if(wrap) { const id = wrap.id.replace('msg-wrapper-',''); const { data } = mySupabaseClient.from('messages').select('created_at').eq('id', id).single().then(res => { if(res.data) el.textContent = `⏳ ${getTimeLeft(res.data.created_at)}`; }); }
+          const createdAt = el.getAttribute('data-created-at');
+          if (createdAt) {
+            el.textContent = `⏳ ${getTimeLeft(createdAt)}`;
+          }
         });
       }
     }, 60000);
