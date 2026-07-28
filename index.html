@@ -721,65 +721,23 @@
       const cancel = () => {
         clearTimeout(pressTimer);
       };
+
+      element.addEventListener('mousedown', start);
+      element.addEventListener('touchstart', start, { passive: true });
+      
+      element.addEventListener('mousemove', move);
+      element.addEventListener('touchmove', move, { passive: true });
+      
+      element.addEventListener('mouseup', cancel);
+      element.addEventListener('mouseleave', cancel);
+      element.addEventListener('touchend', cancel);
+      element.addEventListener('touchcancel', cancel);
+      
+      element.oncontextmenu = (e) => {
+        e.preventDefault();
+        openReactionPicker(msgObj, element);
+      };
     }
-
-      element.addEventListener('mousedown', start);
-      element.addEventListener('touchstart', start, { passive: true });
-      
-      element.addEventListener('mousemove', move);
-      element.addEventListener('touchmove', move, { passive: true });
-      
-      element.addEventListener('mouseup', cancel);
-      element.addEventListener('mouseleave', cancel);
-      element.addEventListener('touchend', cancel);
-      element.addEventListener('touchcancel', cancel);
-      
-      element.oncontextmenu = (e) => {
-        e.preventDefault();
-        openReactionPicker(msgObj, element);
-      };
-    
-
-      const move = (e) => {
-        // Nếu người dùng lướt ngón tay (cuộn chat), hủy ngay lệnh nhấn giữ
-        if (e.type === 'touchmove') {
-          const moveX = e.touches[0].clientX;
-          const moveY = e.touches[0].clientY;
-          if (Math.abs(moveX - startX) > 10 || Math.abs(moveY - startY) > 10) {
-            clearTimeout(pressTimer);
-          }
-        }
-      };
-
-
-      // Gắn sự kiện chuẩn cho cả chuột và cảm ứng điện thoại
-      element.addEventListener('mousedown', start);
-      element.addEventListener('touchstart', start, { passive: true });
-      
-      element.addEventListener('mousemove', move);
-      element.addEventListener('touchmove', move, { passive: true });
-      
-      element.addEventListener('mouseup', cancel);
-      element.addEventListener('mouseleave', cancel);
-      element.addEventListener('touchend', cancel);
-      element.addEventListener('touchcancel', cancel);
-      
-      element.oncontextmenu = (e) => {
-        e.preventDefault();
-        openReactionPicker(msgObj, element);
-      };
-    
-      
-      const cancel = () => clearTimeout(pressTimer);
-
-      element.onmousedown = start;
-      element.ontouchstart = start;
-      element.onmouseup = cancel;
-      element.onmouseleave = cancel;
-      element.ontouchend = cancel;
-      element.ontouchcancel = cancel;
-      element.oncontextmenu = (e) => e.preventDefault(); 
-    
     
     function clearSysLogs() {
       bobaLogs.length = 0;
