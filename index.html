@@ -60,7 +60,7 @@
     .boba-icon-blur {
       position: absolute; opacity: 0.25; filter: blur(2px);
       animation: floatSlow linear infinite alternate;
-      will-change: transform; /* Giúp trình duyệt tối ưu render phần cứng */
+      will-change: transform;
     }
     @keyframes floatSlow {
       from { transform: translateY(0px) rotate(0deg); }
@@ -233,7 +233,7 @@
 
     .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; position: relative;}
     
-    .reply-preview-container { display: none; background: var(--bg-glass-heavy); border-left: 4px solid var(--primary); padding: 8px 15px; display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; border-top: 1px solid var(--glass-border); box-shadow: 0 -4px 15px rgba(0,0,0,0.03);}
+    .reply-preview-container { display: none; background: var(--bg-glass-heavy); border-left: 4px solid var(--primary); padding: 8px 15px; align-items: center; justify-content: space-between; font-size: 0.85rem; border-top: 1px solid var(--glass-border); box-shadow: 0 -4px 15px rgba(0,0,0,0.03);}
     .reply-preview-content { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--text-main); }
     .reply-preview-close { font-size: 1.1rem; cursor: pointer; font-weight: bold; color: var(--text-light); padding: 0 5px; }
 
@@ -734,7 +734,6 @@
   </div>
 
   <script>
-
     const bobaLogs = [];
     const MAX_LOGS = 500;
 
@@ -1535,7 +1534,6 @@
 
       document.getElementById('my-name').textContent = currentProfile.username;
       
-      // -- THÊM TÍNH NĂNG RANK VÀO PROFILE --
       const myRankBadge = document.getElementById('my-rank');
       if (currentRank) {
         myRankBadge.style.display = 'inline-block';
@@ -1576,6 +1574,76 @@
             localStorage.setItem('temp_fcm_token', token);
         }
     };
+
+    async function sendFriendRequest() {
+      const searchInput = document.getElementById('friend-search').value.trim();
+      if (!searchInput) {
+        showAppModal("Thông báo", "Vui lòng nhập Tên#ID của bạn bè (VD: Huy#1234)");
+        return;
+      }
+      const parts = searchInput.split('#');
+      if (parts.length !== 2) {
+        showAppModal("Thông báo", "Định dạng không đúng. Vui lòng nhập Tên#1234 (VD: Huy#1234)");
+        return;
+      }
+      const targetUsername = parts[0].trim();
+      const targetTag = parts[1].trim();
+
+      const { data: targetProfile, error } = await mySupabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('username', targetUsername)
+        .eq('tag', targetTag)
+        .single();
+
+      if (error || !targetProfile) {
+        showAppModal("Lỗi", "Không tìm thấy người dùng này!");
+        return;
+      }
+
+      if (targetProfile.id === currentProfile.id) {
+        showAppModal("Thông báo", "Bạn không thể gửi lời mời kết bạn cho chính mình!");
+        return;
+      }
+
+      const { data: existing } = await mySupabaseClient
+        .from('friends')
+        .select('*')
+        .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${targetProfile.id}),and(sender_id.eq.${targetProfile.id},receiver_id.eq.${currentProfile.id})`);
+
+      if (existing && existing.length > 0) {
+        showAppModal("Thông báo", "Đã tồn tại lời mời hoặc đã là bạn bè!");
+        return;
+      }
+
+      const { error: reqError } = await mySupabaseClient
+        .from('friends')
+        .insert([{ sender_id: currentProfile.id, receiver_id: targetProfile.id, status: 'pending' }]);
+
+      if (reqError) {
+        showAppModal("Lỗi", "Không thể gửi lời mời: " + reqError.message);
+      } else {
+        showAppNotification("Thành công", "Đã gửi lời mời kết bạn!");
+        document.getElementById('friend-search').value = '';
+        loadFriendsData();
+      }
+    }
+
+    async function respondRequest(relId, status) {
+      if (status === 'rejected') {
+        const { error } = await mySupabaseClient.from('friends').delete().eq('id', relId);
+        if (!error) {
+          showAppNotification("Thành công", "Đã từ chối lời mời.");
+          loadFriendsData();
+        }
+      } else if (status === 'accepted') {
+        const { error } = await mySupabaseClient.from('friends').update({ status: 'accepted' }).eq('id', relId);
+        if (!error) {
+          showAppNotification("Thành công", "Đã chấp nhận lời mời kết bạn!");
+          loadFriendsData();
+        }
+      }
+    }
 
     async function loadFriendsData() {
       const { data: relations } = await mySupabaseClient.from('friends')
@@ -1751,7 +1819,6 @@
         replyHTML = `<div class="msg-reply-node" onclick="scrollToMsg('${msg.reply_to_id}')">↪ ${r_text}</div>`;
       }
 
-      // -- TỐI ƯU GÁN DATA-CREATED-AT ĐỂ TÍNH COUNTDOWN LOCAL --
       let innerHtml = `
         ${replyHTML}
         ${mainContentHTML}
@@ -1773,7 +1840,7 @@
         div.id = `msg-wrapper-${msg.id}`;
         div.innerHTML = innerHtml;
         bindLongPress(div, msg);
-        div.onclick = () => openReactionPicker(msg.id, div);
+        div.onclick = () => openReactionPicker(msg, div);
         div.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl, rawAudioUrl);
         area.appendChild(div);
       }
@@ -1796,7 +1863,8 @@
       return `${h}h`;
     }
 
-    let activeReactionMsg = null; // Lưu thêm object tin nhắn để xử lý actions
+    let activeReactionMsg = null;
+    let activeReactionMsgId = null;
 
     function openReactionPicker(msg, el) {
       activeReactionMsg = msg;
@@ -1805,27 +1873,23 @@
       const overlay = document.getElementById('reaction-overlay');
       const box = document.getElementById('reaction-box');
       
-      // 1. Logic bật/tắt nút: Chỉ hiển thị nút "Thu hồi" nếu bạn là người gửi
       const isSentByMe = msg.sender_id === currentProfile.id;
       document.getElementById('btn-revoke-msg').style.display = isSentByMe ? 'flex' : 'none';
       
-      // 2. Logic bật/tắt nút: Chỉ cho phép sao chép nếu là tin nhắn văn bản
       const isTextMsg = !msg.is_sticker && !msg.image_url && !msg.audio_url;
       document.getElementById('btn-copy-msg').style.display = isTextMsg ? 'flex' : 'none';
 
-      // 3. Tính toán vị trí hiển thị bảng menu
       const rect = el.getBoundingClientRect();
       box.style.position = 'absolute'; 
       box.style.top = `${rect.top + 30}px`; 
       box.style.left = `${rect.left}px`;
       
       if(rect.left > window.innerWidth / 2) box.style.left = `${rect.right - box.offsetWidth}px`;
-      if(rect.top + box.offsetHeight > window.innerHeight) box.style.top = `${rect.top - box.offsetHeight - 20}px`; // Đẩy lên nếu bị lấp dưới đáy
+      if(rect.top + box.offsetHeight > window.innerHeight) box.style.top = `${rect.top - box.offsetHeight - 20}px`;
 
       overlay.classList.add('active');
     }
 
-    // --- CÁC HÀM XỬ LÝ HÀNH ĐỘNG TIN NHẮN ---
     function copyActionMessage() {
       if(activeReactionMsg && activeReactionMsg.content) {
         navigator.clipboard.writeText(activeReactionMsg.content).then(() => {
@@ -1840,7 +1904,6 @@
       if (!activeReactionMsgId) return;
       
       if (isRevoke) {
-        // Thu hồi (Xóa dữ liệu trên Supabase)
         const confirmed = await showAppModal("Thu hồi", "Bạn có chắc chắn muốn thu hồi tin nhắn này không?", true);
         if (confirmed) {
           const { error } = await mySupabaseClient.from('messages').delete().eq('id', activeReactionMsgId);
@@ -1852,7 +1915,6 @@
           }
         }
       } else {
-        // Xóa phía tôi (Chỉ ẩn giao diện UI tại client hiện tại)
         const confirmed = await showAppModal("Xóa ở phía tôi", "Tin nhắn này sẽ được xóa khỏi màn hình của bạn.", true);
         if (confirmed) {
           const el = document.getElementById(`msg-wrapper-${activeReactionMsgId}`);
@@ -1881,6 +1943,7 @@
     }
 
     function toggleStickers() { document.getElementById('sticker-panel').classList.toggle('active'); }
+    
     async function sendSticker(url) {
       if(!activeFriendId) return;
       document.getElementById('sticker-panel').classList.remove('active');
@@ -1931,146 +1994,130 @@
       const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: url };
       if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
       const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
-      if (data) { renderMessage(data); scrollToBottom(); showAppNotification('Thành công', 'Đã gửi file xong!'); }
-    }
-
-    async function sendFriendRequest() {
-      const searchTxt = document.getElementById('friend-search').value.trim(); 
-      if (!searchTxt.includes('#')) { await showAppModal("Lỗi", "Nhập đúng định dạng Tên#1234 nha!"); return; }
-      const [uName, uTag] = searchTxt.split('#');
-
-      const { data: target } = await mySupabaseClient.from('profiles').select('id').eq('username', uName).eq('tag', uTag).single();
-      if (!target) { await showAppModal("Lỗi", "Không tìm thấy ai tên này, kiểm tra lại số tag nha!"); return; }
-      if (target.id === currentProfile.id) { await showAppModal("Hì", "Bạn không thể tự kết bạn với chính mình!"); return; }
-  
-      const { data: exist } = await mySupabaseClient.from('friends').select('id')
-        .or(`and(sender_id.eq.${currentProfile.id},receiver_id.eq.${target.id}),and(sender_id.eq.${target.id},receiver_id.eq.${currentProfile.id})`).single();
-      
-      if (exist) { await showAppModal("Lỗi", "Đã gửi lời mời hoặc đã là bạn bè rồi!"); return; }
-      
-      const { error } = await mySupabaseClient.from('friends').insert([{ sender_id: currentProfile.id, receiver_id: target.id, status: 'pending' }]);
-      if (error) { await showAppModal("Lỗi", error.message); } 
-      else { await showAppModal("Xong!", "Đã gửi lời mời kết bạn thành thành công!"); document.getElementById('friend-search').value = ''; loadFriendsData(); }
-    }
-
-    async function respondRequest(relId, status) {
-      if (status === 'accepted') { await mySupabaseClient.from('friends').update({ status }).eq('id', relId); } 
-      else { await mySupabaseClient.from('friends').delete().eq('id', relId); }
-      loadFriendsData();
+      if (data) { renderMessage(data); scrollToBottom(); }
     }
 
     function subscribeToChanges() {
-      mySupabaseClient.channel('realtime_msg')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-          const msg = payload.new;
-          if (activeFriendId && ((msg.sender_id === activeFriendId && msg.receiver_id === currentProfile.id) || (msg.sender_id === currentProfile.id && msg.receiver_id === activeFriendId))) {
-            if(msg.receiver_id === currentProfile.id) { mySupabaseClient.from('messages').update({is_read: true}).eq('id', msg.id).then(()=>{}); msg.is_read = true; }
-            renderMessage(msg); scrollToBottom(true);
-          } else if (msg.receiver_id === currentProfile.id) {
-            const sender = friendsList.find(f => f.id === msg.sender_id);
-            if(sender) {
-              const lang = localStorage.getItem('boba_lang') || 'vi';
-              let nt = lang === 'en' ? 'New Message' : 'Tin nhắn mới';
-              let text = msg.content;
-              if (msg.is_sticker) text = '[Sticker]';
-              else if (msg.image_url) text = msg.image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? '[Video]' : (lang === 'en' ? '[Image]' : '[Hình ảnh]');
-              else if (msg.audio_url) text = lang === 'en' ? '[Voice Message 🎤]' : '[Tin nhắn thoại 🎤]';
-              showAppNotification(nt + ` từ ${sender.username}`, text); 
-              
-              const elMsgBox = document.getElementById(`last-msg-${msg.sender_id}`);
-              if(elMsgBox) { elMsgBox.textContent = text; elMsgBox.style.fontWeight = 'bold'; }
+      mySupabaseClient
+        .channel('public:messages')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newMsg = payload.new;
+            if (
+              (newMsg.sender_id === currentProfile.id && newMsg.receiver_id === activeFriendId) ||
+              (newMsg.sender_id === activeFriendId && newMsg.receiver_id === currentProfile.id)
+            ) {
+              renderMessage(newMsg);
+              scrollToBottom();
+              if (newMsg.sender_id === activeFriendId) {
+                mySupabaseClient.from('messages').update({ is_read: true }).eq('id', newMsg.id);
+              }
+            } else if (newMsg.receiver_id === currentProfile.id) {
+              showAppNotification("Tin nhắn mới", newMsg.content || "Bạn có tin nhắn mới!");
+              loadFriendsData();
             }
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedMsg = payload.new;
+            if (
+              (updatedMsg.sender_id === currentProfile.id && updatedMsg.receiver_id === activeFriendId) ||
+              (updatedMsg.sender_id === activeFriendId && updatedMsg.receiver_id === currentProfile.id)
+            ) {
+              renderMessage(updatedMsg);
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id;
+            const el = document.getElementById(`msg-wrapper-${deletedId}`);
+            if (el) el.remove();
           }
         })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, payload => {
-          if (activeFriendId) {
-             const m = payload.new;
-             if((m.sender_id === activeFriendId && m.receiver_id === currentProfile.id) || (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId)) {
-                renderMessage(m);
-             }
-          }
+        .subscribe();
+
+      mySupabaseClient
+        .channel('public:friends')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, () => {
+          loadFriendsData();
         })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friends' }, () => { loadFriendsData(); })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'friends' }, () => { loadFriendsData(); })
         .subscribe();
     }
 
-    // -- TỐI ƯU INTERVAL ĐẾM NGƯỢC (TÍNH LOCAL KHÔNG CẦN TRUY VẤN DB) --
-    setInterval(() => {
-      if (document.getElementById('chat-room').classList.contains('active')) {
-        document.querySelectorAll('.msg-countdown').forEach(el => {
-          const createdAt = el.getAttribute('data-created-at');
-          if (createdAt) {
-            el.textContent = `⏳ ${getTimeLeft(createdAt)}`;
-          }
-        });
-      }
-    }, 60000);
+    /* --- YOUTUBE BOBA MUSIC LOGIC --- */
+    let ytPlayer = null;
 
-    mySupabaseClient.auth.getSession().then(({ data: { session } }) => {
-      if (session) { currentUser = session.user; loadApp(); } 
-      else { document.getElementById('auth-screen').classList.add('active'); applySettings(); }
-    });
-
-    // ==========================================
-    // THÊM TÍNH NĂNG BOBA MUSIC (YOUTUBE API)
-    // ==========================================
-
-    // 1. Tải script YouTube IFrame API bất đồng bộ
-    const ytScriptTag = document.createElement('script');
-    ytScriptTag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(ytScriptTag, firstScriptTag);
-
-    let ytPlayer;
-
-    // 2. Hàm callback mặc định của YouTube API khi load xong
-    window.onYouTubeIframeAPIReady = function() {
-      ytPlayer = new YT.Player('yt-player', {
-        height: '100%',
-        width: '100%',
-        videoId: 'jfKfPfyJRdk', // Mặc định để Lofi Girl stream
-        playerVars: {
-          'playsinline': 1,
-          'controls': 1 // Hiện thanh điều khiển của YT
-        }
-      });
-    };
-
-    // 3. Xử lý UI Ẩn/Hiện Panel
-    document.getElementById('btn-music-toggle').addEventListener('click', () => {
-      document.getElementById('music-panel').classList.toggle('hidden');
-    });
-    document.getElementById('btn-close-music').addEventListener('click', () => {
-      document.getElementById('music-panel').classList.add('hidden');
-    });
-
-    // 4. Xử lý trích xuất ID và Phát nhạc từ Link
-    document.getElementById('btn-play-yt').addEventListener('click', () => {
-      const link = document.getElementById('yt-link-input').value.trim();
-      const videoId = extractVideoID(link);
-      
-      if (videoId && ytPlayer && ytPlayer.loadVideoById) {
-        ytPlayer.loadVideoById(videoId);
-      } else {
-        alert("🧋 Bạn nhập sai link YouTube rồi, thử lại nhé!");
-      }
-    });
-
-    // 5. Nút điều khiển nhanh
-    document.getElementById('btn-yt-pause').addEventListener('click', () => {
-      if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
-    });
-    document.getElementById('btn-yt-play').addEventListener('click', () => {
-      if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo();
-    });
-
-    // Hàm regex lấy Video ID từ mọi định dạng link YouTube
-    function extractVideoID(url) {
+    function extractYouTubeId(url) {
+      if (!url) return null;
       const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
       const match = url.match(regExp);
       return (match && match[2].length === 11) ? match[2] : null;
     }
+
+    function initYouTubeMusic() {
+      const toggleBtn = document.getElementById('btn-music-toggle');
+      const closeBtn = document.getElementById('btn-close-music');
+      const panel = document.getElementById('music-panel');
+      const playBtn = document.getElementById('btn-play-yt');
+      const pauseBtn = document.getElementById('btn-yt-pause');
+      const resumeBtn = document.getElementById('btn-yt-play');
+
+      if (toggleBtn && panel) {
+        toggleBtn.onclick = () => panel.classList.toggle('hidden');
+      }
+      if (closeBtn && panel) {
+        closeBtn.onclick = () => panel.classList.add('hidden');
+      }
+
+      if (!window.YT) {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      }
+
+      if (playBtn) {
+        playBtn.onclick = () => {
+          const link = document.getElementById('yt-link-input').value.trim();
+          const videoId = extractYouTubeId(link);
+          if (!videoId) {
+            showAppNotification('Lỗi', 'Link YouTube không hợp lệ!');
+            return;
+          }
+          if (ytPlayer) {
+            ytPlayer.loadVideoById(videoId);
+          } else if (window.YT && window.YT.Player) {
+            ytPlayer = new window.YT.Player('yt-player', {
+              height: '100%',
+              width: '100%',
+              videoId: videoId,
+              playerVars: { 'autoplay': 1, 'playsinline': 1 },
+              events: {
+                'onReady': (e) => e.target.playVideo()
+              }
+            });
+          } else {
+            showAppNotification('Thông báo', 'Đang tải trình phát YouTube, vui lòng thử lại sau giây lát.');
+          }
+        };
+      }
+
+      if (pauseBtn) {
+        pauseBtn.onclick = () => {
+          if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+            ytPlayer.pauseVideo();
+          }
+        };
+      }
+
+      if (resumeBtn) {
+        resumeBtn.onclick = () => {
+          if (ytPlayer && typeof ytPlayer.playVideo === 'function') {
+            ytPlayer.playVideo();
+          }
+        };
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initYouTubeMusic();
+    });
   </script>
 </body>
 </html>
