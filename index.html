@@ -112,27 +112,43 @@
     .btn-cancel { background: var(--white); color: var(--text-light); border: 1px solid var(--glass-border); }
 
     /* Reactions overlay */
+    /* Reactions & Actions overlay */
     #reaction-overlay { z-index: 100001; }
     .reaction-box {
       background: var(--bg-glass-heavy);
       border: 1px solid var(--glass-border);
-      padding: 15px 25px;
-      border-radius: 40px;
+      border-radius: 24px;
       display: flex;
-      gap: 15px;
+      flex-direction: column;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
       transform: scale(0.8) translateY(20px);
       transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      overflow: hidden;
+      min-width: 240px;
+      padding: 0; /* Bỏ padding cũ để gộp mảng tùy chọn */
     }
     .modal-overlay.active .reaction-box { transform: scale(1) translateY(0); }
+    
+    .reaction-row {
+      display: flex; gap: 12px; padding: 15px 20px; 
+      border-bottom: 1px solid rgba(0,0,0,0.08); 
+      justify-content: center;
+    }
+    body.dark-mode .reaction-row { border-bottom: 1px solid rgba(255,255,255,0.08); }
     .reaction-item {
-      font-size: 2.4rem;
-      cursor: pointer;
-      transition: transform 0.2s;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
+      font-size: 2rem; cursor: pointer; transition: transform 0.2s; user-select: none;
     }
     .reaction-item:active, .reaction-item:hover { transform: scale(1.3) translateY(-5px); }
+    
+    .action-options { display: flex; flex-direction: column; padding: 5px 0; }
+    .action-btn { 
+      background: transparent; border: none; padding: 12px 20px; text-align: left; 
+      font-size: 1rem; font-weight: 700; color: var(--text-main); cursor: pointer; 
+      transition: background 0.2s; display: flex; align-items: center; gap: 10px;
+    }
+    .action-btn:hover, .action-btn:active { background: rgba(0,0,0,0.05); }
+    body.dark-mode .action-btn:hover, body.dark-mode .action-btn:active { background: rgba(255,255,255,0.05); }
+    .action-btn.danger { color: #e57373; }
 
     /* App Container */
     .app-container { 
@@ -425,12 +441,21 @@
 
   <div id="reaction-overlay" class="modal-overlay" onclick="closeReactionPicker(event)">
     <div class="reaction-box" id="reaction-box">
-      <div class="reaction-item" onclick="submitReaction('❤️')">❤️</div>
-      <div class="reaction-item" onclick="submitReaction('😆')">😆</div>
-      <div class="reaction-item" onclick="submitReaction('😮')">😮</div>
-      <div class="reaction-item" onclick="submitReaction('😢')">😢</div>
-      <div class="reaction-item" onclick="submitReaction('😡')">😡</div>
-      <div class="reaction-item" onclick="submitReaction('👍')">👍</div>
+      <!-- Dòng Emoji -->
+      <div class="reaction-row">
+        <div class="reaction-item" onclick="submitReaction('❤️')">❤️</div>
+        <div class="reaction-item" onclick="submitReaction('😆')">😆</div>
+        <div class="reaction-item" onclick="submitReaction('😮')">😮</div>
+        <div class="reaction-item" onclick="submitReaction('😢')">😢</div>
+        <div class="reaction-item" onclick="submitReaction('😡')">😡</div>
+        <div class="reaction-item" onclick="submitReaction('👍')">👍</div>
+      </div>
+      <!-- Cột Tùy chọn -->
+      <div class="action-options">
+        <button class="action-btn" id="btn-copy-msg" onclick="copyActionMessage()">📋 Sao chép</button>
+        <button class="action-btn" id="btn-delete-me" onclick="deleteActionMessage(false)">🗑️ Xóa ở phía tôi</button>
+        <button class="action-btn danger" id="btn-revoke-msg" onclick="deleteActionMessage(true)">🚫 Thu hồi</button>
+      </div>
     </div>
   </div>
 
@@ -666,6 +691,26 @@
       renderSysLogs();
     }
 
+    function bindLongPress(element, msgObj) {
+      let pressTimer;
+      const start = (e) => {
+        if (e.type === 'contextmenu') e.preventDefault(); // Ngăn menu chuột phải của trình duyệt
+        pressTimer = setTimeout(() => {
+          openReactionPicker(msgObj, element);
+        }, 500); // Kích hoạt sau khi nhấn giữ 500ms
+      };
+      
+      const cancel = () => clearTimeout(pressTimer);
+
+      element.onmousedown = start;
+      element.ontouchstart = start;
+      element.onmouseup = cancel;
+      element.onmouseleave = cancel;
+      element.ontouchend = cancel;
+      element.ontouchcancel = cancel;
+      element.oncontextmenu = (e) => e.preventDefault(); 
+    }
+    
     function clearSysLogs() {
       bobaLogs.length = 0;
       renderSysLogs();
@@ -1599,13 +1644,15 @@
 
       if (existingWrapper) {
         existingWrapper.innerHTML = innerHtml;
-        existingWrapper.onclick = () => openReactionPicker(msg.id, existingWrapper);
+        existingWrapper.onclick = null;
+        bindLongPress(existingWrapper, msg);
         existingWrapper.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl, rawAudioUrl);
       } else {
         const div = document.createElement('div');
         div.className = `msg-wrapper ${isSent ? 'sent' : 'received'}`;
         div.id = `msg-wrapper-${msg.id}`;
         div.innerHTML = innerHtml;
+        bindLongPress(div, msg);
         div.onclick = () => openReactionPicker(msg.id, div);
         div.ondblclick = () => replyToMessage(msg.id, rawContent, msg.is_sticker, rawImgUrl, rawAudioUrl);
         area.appendChild(div);
@@ -1629,15 +1676,69 @@
       return `${h}h`;
     }
 
-    let activeReactionMsgId = null;
-    function openReactionPicker(msgId, el) {
-      activeReactionMsgId = msgId; 
+    let activeReactionMsg = null; // Lưu thêm object tin nhắn để xử lý actions
+
+    function openReactionPicker(msg, el) {
+      activeReactionMsg = msg;
+      activeReactionMsgId = msg.id; 
+      
       const overlay = document.getElementById('reaction-overlay');
       const box = document.getElementById('reaction-box');
+      
+      // 1. Logic bật/tắt nút: Chỉ hiển thị nút "Thu hồi" nếu bạn là người gửi
+      const isSentByMe = msg.sender_id === currentProfile.id;
+      document.getElementById('btn-revoke-msg').style.display = isSentByMe ? 'flex' : 'none';
+      
+      // 2. Logic bật/tắt nút: Chỉ cho phép sao chép nếu là tin nhắn văn bản
+      const isTextMsg = !msg.is_sticker && !msg.image_url && !msg.audio_url;
+      document.getElementById('btn-copy-msg').style.display = isTextMsg ? 'flex' : 'none';
+
+      // 3. Tính toán vị trí hiển thị bảng menu
       const rect = el.getBoundingClientRect();
-      box.style.position = 'absolute'; box.style.top = `${rect.top - 70}px`; box.style.left = `${rect.left}px`;
+      box.style.position = 'absolute'; 
+      box.style.top = `${rect.top + 30}px`; 
+      box.style.left = `${rect.left}px`;
+      
       if(rect.left > window.innerWidth / 2) box.style.left = `${rect.right - box.offsetWidth}px`;
+      if(rect.top + box.offsetHeight > window.innerHeight) box.style.top = `${rect.top - box.offsetHeight - 20}px`; // Đẩy lên nếu bị lấp dưới đáy
+
       overlay.classList.add('active');
+    }
+
+    // --- CÁC HÀM XỬ LÝ HÀNH ĐỘNG TIN NHẮN ---
+    function copyActionMessage() {
+      if(activeReactionMsg && activeReactionMsg.content) {
+        navigator.clipboard.writeText(activeReactionMsg.content).then(() => {
+          showAppNotification("Thành công", "Đã sao chép nội dung tin nhắn!");
+        });
+      }
+      document.getElementById('reaction-overlay').classList.remove('active');
+    }
+
+    async function deleteActionMessage(isRevoke) {
+      document.getElementById('reaction-overlay').classList.remove('active');
+      if (!activeReactionMsgId) return;
+      
+      if (isRevoke) {
+        // Thu hồi (Xóa dữ liệu trên Supabase)
+        const confirmed = await showAppModal("Thu hồi", "Bạn có chắc chắn muốn thu hồi tin nhắn này không?", true);
+        if (confirmed) {
+          const { error } = await mySupabaseClient.from('messages').delete().eq('id', activeReactionMsgId);
+          if (!error) {
+            const el = document.getElementById(`msg-wrapper-${activeReactionMsgId}`);
+            if (el) el.remove();
+          } else {
+            showAppNotification("Lỗi", "Không thể thu hồi tin nhắn lúc này.");
+          }
+        }
+      } else {
+        // Xóa phía tôi (Chỉ ẩn giao diện UI tại client hiện tại)
+        const confirmed = await showAppModal("Xóa ở phía tôi", "Tin nhắn này sẽ được xóa khỏi màn hình của bạn.", true);
+        if (confirmed) {
+          const el = document.getElementById(`msg-wrapper-${activeReactionMsgId}`);
+          if (el) el.remove();
+        }
+      }
     }
 
     function closeReactionPicker(e) { if(e.target.id === 'reaction-overlay') document.getElementById('reaction-overlay').classList.remove('active'); }
