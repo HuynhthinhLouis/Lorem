@@ -111,7 +111,6 @@
     .btn-ok { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
     .btn-cancel { background: var(--white); color: var(--text-light); border: 1px solid var(--glass-border); }
 
-    /* Reactions overlay */
     /* Reactions & Actions overlay */
     #reaction-overlay { z-index: 100001; }
     .reaction-box {
@@ -125,7 +124,7 @@
       transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
       overflow: hidden;
       min-width: 240px;
-      padding: 0; /* Bỏ padding cũ để gộp mảng tùy chọn */
+      padding: 0;
     }
     .modal-overlay.active .reaction-box { transform: scale(1) translateY(0); }
     
@@ -378,6 +377,78 @@
     .msg-bubble, .msg-img, .msg-video, .msg-audio { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .msg-bubble:hover, .msg-img:hover, .msg-video:hover, .msg-audio:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important; }
 
+    /* ========================================== */
+    /* YOUTUBE BOBA MUSIC STYLES                  */
+    /* ========================================== */
+    .floating-music-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px; 
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      font-size: 24px;
+      z-index: 1000;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s ease;
+      background: var(--bg-glass-heavy); 
+      border: 1px solid var(--glass-border); 
+      color: var(--text-main);
+      cursor: pointer;
+    }
+    .floating-music-btn:hover {
+      transform: scale(1.1) rotate(10deg);
+    }
+
+    #music-panel {
+      position: fixed;
+      bottom: 85px;
+      left: 20px;
+      width: 300px;
+      z-index: 1001;
+      padding: 20px;
+      border-radius: 25px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      background: var(--bg-glass-heavy);
+      backdrop-filter: blur(16px); 
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      transition: all 0.3s ease-in-out;
+    }
+
+    #music-panel.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+    }
+
+    .music-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .glass-btn {
+      background: var(--white); border: 1px solid var(--glass-border); padding: 8px 12px;
+      border-radius: 12px; color: var(--text-main); font-weight: bold; cursor: pointer;
+      transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .glass-btn:active { transform: scale(0.95); }
+    
+    .glass-input {
+      background: var(--white); border: 1px solid var(--glass-border); padding: 10px;
+      border-radius: 12px; color: var(--text-main); outline: none; font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+      #music-panel {
+        width: calc(100% - 40px);
+        bottom: 80px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -441,7 +512,6 @@
 
   <div id="reaction-overlay" class="modal-overlay" onclick="closeReactionPicker(event)">
     <div class="reaction-box" id="reaction-box">
-      <!-- Dòng Emoji -->
       <div class="reaction-row">
         <div class="reaction-item" onclick="submitReaction('❤️')">❤️</div>
         <div class="reaction-item" onclick="submitReaction('😆')">😆</div>
@@ -450,7 +520,6 @@
         <div class="reaction-item" onclick="submitReaction('😡')">😡</div>
         <div class="reaction-item" onclick="submitReaction('👍')">👍</div>
       </div>
-      <!-- Cột Tùy chọn -->
       <div class="action-options">
         <button class="action-btn" id="btn-copy-msg" onclick="copyActionMessage()">📋 Sao chép</button>
         <button class="action-btn" id="btn-delete-me" onclick="deleteActionMessage(false)">🗑️ Xóa ở phía tôi</button>
@@ -614,7 +683,6 @@
         
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
         
-        <!-- Thanh Custom Voice Ghi Âm -->
         <div id="voice-recording-bar" class="voice-bar">
            <div style="display: flex; align-items: center; gap: 8px;">
                <span style="color: #ff4d4d; animation: pulseRecording 1.5s infinite;">🔴</span>
@@ -639,6 +707,30 @@
       </div>
     </div>
 
+  </div>
+
+  <button id="btn-music-toggle" class="floating-music-btn" title="Nghe nhạc YouTube">🎧</button>
+
+  <div id="music-panel" class="hidden">
+    <div class="music-header">
+      <h3 style="margin: 0; color: var(--primary); font-weight: 800;">Boba Music 🎵</h3>
+      <button id="btn-close-music" class="glass-btn" style="padding: 5px 10px;">✖</button>
+    </div>
+    
+    <div class="music-body" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+      <input type="text" id="yt-link-input" placeholder="Dán link YouTube vào đây..." class="glass-input" style="width: 100%; box-sizing: border-box;" />
+      
+      <button id="btn-play-yt" class="glass-btn" style="background: var(--primary); color: var(--white); border: none;">Phát nhạc</button>
+      
+      <div class="music-controls" style="display: flex; gap: 10px; justify-content: center;">
+        <button id="btn-yt-pause" class="glass-btn" style="flex: 1;">⏸ Dừng</button>
+        <button id="btn-yt-play" class="glass-btn" style="flex: 1;">▶ Tiếp tục</button>
+      </div>
+      
+      <div id="yt-player-container" style="margin-top: 10px; border-radius: 15px; overflow: hidden; height: 150px; background: rgba(0,0,0,0.1);">
+        <div id="yt-player"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1920,6 +2012,65 @@
       else { document.getElementById('auth-screen').classList.add('active'); applySettings(); }
     });
 
+    // ==========================================
+    // THÊM TÍNH NĂNG BOBA MUSIC (YOUTUBE API)
+    // ==========================================
+
+    // 1. Tải script YouTube IFrame API bất đồng bộ
+    const ytScriptTag = document.createElement('script');
+    ytScriptTag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(ytScriptTag, firstScriptTag);
+
+    let ytPlayer;
+
+    // 2. Hàm callback mặc định của YouTube API khi load xong
+    window.onYouTubeIframeAPIReady = function() {
+      ytPlayer = new YT.Player('yt-player', {
+        height: '100%',
+        width: '100%',
+        videoId: 'jfKfPfyJRdk', // Mặc định để Lofi Girl stream
+        playerVars: {
+          'playsinline': 1,
+          'controls': 1 // Hiện thanh điều khiển của YT
+        }
+      });
+    };
+
+    // 3. Xử lý UI Ẩn/Hiện Panel
+    document.getElementById('btn-music-toggle').addEventListener('click', () => {
+      document.getElementById('music-panel').classList.toggle('hidden');
+    });
+    document.getElementById('btn-close-music').addEventListener('click', () => {
+      document.getElementById('music-panel').classList.add('hidden');
+    });
+
+    // 4. Xử lý trích xuất ID và Phát nhạc từ Link
+    document.getElementById('btn-play-yt').addEventListener('click', () => {
+      const link = document.getElementById('yt-link-input').value.trim();
+      const videoId = extractVideoID(link);
+      
+      if (videoId && ytPlayer && ytPlayer.loadVideoById) {
+        ytPlayer.loadVideoById(videoId);
+      } else {
+        alert("🧋 Bạn nhập sai link YouTube rồi, thử lại nhé!");
+      }
+    });
+
+    // 5. Nút điều khiển nhanh
+    document.getElementById('btn-yt-pause').addEventListener('click', () => {
+      if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+    });
+    document.getElementById('btn-yt-play').addEventListener('click', () => {
+      if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo();
+    });
+
+    // Hàm regex lấy Video ID từ mọi định dạng link YouTube
+    function extractVideoID(url) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
   </script>
 </body>
 </html>
