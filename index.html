@@ -283,21 +283,6 @@
       100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
     }
 
-    /* THANH GHI ÂM CUSTOM */
-    #voice-recording-bar {
-      display: none; flex: 1; align-items: center; justify-content: space-between;
-      background: rgba(255, 77, 77, 0.1); border-radius: 20px; padding: 0 15px;
-      border: 1px solid rgba(255, 77, 77, 0.3); box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
-      height: 40px; margin-right: 4px;
-    }
-    .voice-wave { display: flex; align-items: center; gap: 4px; height: 100%; flex: 1; justify-content: center; margin: 0 10px; }
-    .voice-wave span { width: 4px; height: 4px; background: #ff4d4d; border-radius: 2px; animation: wave 1s infinite ease-in-out; }
-    .voice-wave span:nth-child(2) { animation-delay: 0.2s; }
-    .voice-wave span:nth-child(3) { animation-delay: 0.4s; }
-    .voice-wave span:nth-child(4) { animation-delay: 0.6s; }
-    .voice-wave span:nth-child(5) { animation-delay: 0.8s; }
-    @keyframes wave { 0%, 100% { height: 4px; } 50% { height: 18px; } }
-
     /* Style cho trình phát audio trong tin nhắn */
     .msg-audio {
       max-width: 220px;
@@ -596,18 +581,6 @@
         
         <button class="icon-btn" id="voice-btn" onclick="toggleVoiceRecord()" title="Ghi âm">🎤</button>
         
-        <!-- THANH GHI ÂM CUSTOM -->
-        <div id="voice-recording-bar">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="color: #ff4d4d; animation: pulseRecording 1s infinite; font-size: 0.9rem;">🔴</span>
-            <span id="voice-timer" style="font-weight: 800; color: #ff4d4d; font-size: 0.95rem; font-variant-numeric: tabular-nums;">00:00</span>
-          </div>
-          <div class="voice-wave">
-            <span></span><span></span><span></span><span></span><span></span>
-          </div>
-          <button style="background: none; border: none; color: #ff4d4d; font-size: 1.2rem; cursor: pointer; padding: 0 5px;" onclick="cancelVoiceRecord()" title="Hủy">✖</button>
-        </div>
-
         <form id="chat-form" style="display: flex; flex: 1; gap: 8px; min-width: 0;">
           <input type="text" id="message-input" placeholder="Aa..." autocomplete="off">
           <button type="submit">➤</button>
@@ -865,34 +838,22 @@
     let replyingMessageId = null;
     let registerAvatarFile = null;
 
-    // --- TÍNH NĂNG GHI ÂM (ĐÃ NÂNG CẤP CHẤT LƯỢNG & UI) ---
+    // --- TÍNH NĂNG GHI ÂM ĐÃ ĐƯỢC NÂNG CẤP CHẤT LƯỢNG ---
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
-    let recordTimerInterval;
-    let recordSeconds = 0;
-    let cancelRecordingFlag = false;
-
-    function updateVoiceTimer() {
-      recordSeconds++;
-      const mins = Math.floor(recordSeconds / 60).toString().padStart(2, '0');
-      const secs = (recordSeconds % 60).toString().padStart(2, '0');
-      document.getElementById('voice-timer').textContent = `${mins}:${secs}`;
-    }
 
     async function toggleVoiceRecord() {
       const voiceBtn = document.getElementById('voice-btn');
-      const chatForm = document.getElementById('chat-form');
-      const voiceBar = document.getElementById('voice-recording-bar');
       
       if (!isRecording) {
         try {
-          // Bật thu âm CHẤT LƯỢNG CAO NHẤT (Tắt lọc ồn, tắt tự chỉnh volume để tiếng tự nhiên nhất)
+          // Bổ sung các thông số giúp tăng chất lượng lọc ồn và đầu vào mic
           const audioConstraints = {
             audio: {
-              echoCancellation: false, 
-              noiseSuppression: false, 
-              autoGainControl: false,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
               sampleRate: 48000,
               channelCount: 2
             }
@@ -900,68 +861,42 @@
 
           const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
           
-          // Tăng Bitrate lên 320kbps (chất lượng cao nhất của WebM/Opus)
-          let options = { audioBitsPerSecond: 320000 };
+          // Tăng Bitrate lên 128kbps để tránh bị rè và nén quá đà
+          let options = { audioBitsPerSecond: 128000 };
           
+          // Kiểm tra và sử dụng chuẩn Opus (âm thanh chất lượng cao của webm) nếu trình duyệt có hỗ trợ
           if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
             options.mimeType = 'audio/webm;codecs=opus';
           }
           
           mediaRecorder = new MediaRecorder(stream, options);
           audioChunks = [];
-          cancelRecordingFlag = false;
           
           mediaRecorder.ondataavailable = e => {
             if (e.data.size > 0) audioChunks.push(e.data);
           };
           
           mediaRecorder.onstop = async () => {
+            // Đảm bảo tạo định dạng chính xác từ chunk đã ghi
             const mime = mediaRecorder.mimeType || 'audio/webm';
             const audioBlob = new Blob(audioChunks, { type: mime });
             stream.getTracks().forEach(track => track.stop()); 
-            
-            // Tắt UI Thanh Ghi âm
-            chatForm.style.display = 'flex';
-            voiceBar.style.display = 'none';
-            clearInterval(recordTimerInterval);
-            document.getElementById('voice-timer').textContent = '00:00';
-            
-            // Nếu không bị huỷ thì mới gửi
-            if(!cancelRecordingFlag) {
-              await uploadVoice(audioBlob);
-            }
+            await uploadVoice(audioBlob);
           };
           
           mediaRecorder.start();
           isRecording = true;
           voiceBtn.classList.add('recording');
           voiceBtn.textContent = '⏹️'; 
-          
-          // Kích hoạt UI Thanh Ghi Âm Custom
-          chatForm.style.display = 'none';
-          voiceBar.style.display = 'flex';
-          recordSeconds = 0;
-          recordTimerInterval = setInterval(updateVoiceTimer, 1000);
+          showAppNotification('Đang ghi âm...', 'Nhấn nút vuông để kết thúc và gửi 🎙️');
           
         } catch (err) {
           console.error("Lỗi truy cập Micro:", err);
           showAppModal("Lỗi", "Không thể truy cập micro. Hãy kiểm tra quyền cấp cho trình duyệt!");
         }
       } else {
-        // Dừng ghi âm và gửi đi
         mediaRecorder.stop();
         isRecording = false;
-        voiceBtn.classList.remove('recording');
-        voiceBtn.textContent = '🎤';
-      }
-    }
-
-    function cancelVoiceRecord() {
-      if(isRecording) {
-        cancelRecordingFlag = true;
-        mediaRecorder.stop();
-        isRecording = false;
-        const voiceBtn = document.getElementById('voice-btn');
         voiceBtn.classList.remove('recording');
         voiceBtn.textContent = '🎤';
       }
@@ -1033,16 +968,16 @@
       });
     }
 
-    /* --- HAM NEN VIDEO BROWSER (ĐÃ FIX LỖI MẤT TIẾNG) --- */
+    /* --- HAM NEN VIDEO BROWSER (Canvas + MediaRecorder) --- */
     async function compressVideo(file, targetWidth = 640, bitrate = 800000) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('video/')) return resolve(file);
         
-        showAppNotification('Đang nén video...', 'Video đang được nén tối ưu dung lượng và giữ lại âm thanh 🎬');
+        showAppNotification('Đang nén video...', 'Video đang được nén tối ưu dung lượng 🎬');
         
         const video = document.createElement('video');
         video.src = URL.createObjectURL(file);
-        video.muted = true; // Phải mute để chạy nền
+        video.muted = true;
         video.playsInline = true;
 
         video.onloadedmetadata = () => {
@@ -1061,26 +996,6 @@
 
           const stream = canvas.captureStream(24);
           
-          // TÍCH HỢP TRÍCH XUẤT ÂM THANH TỪ VIDEO GỐC VÀO STREAM CỦA CANVAS
-          try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioCtx.createMediaElementSource(video);
-            const destination = audioCtx.createMediaStreamDestination();
-            source.connect(destination);
-            
-            const audioTracks = destination.stream.getAudioTracks();
-            if (audioTracks.length > 0) {
-              stream.addTrack(audioTracks[0]);
-              console.log("🔊 Lấy track âm thanh video gốc thành công!");
-            }
-          } catch(err) {
-            console.warn("Lỗi dùng Web Audio API, thử captureStream gốc:", err);
-            if(video.captureStream) {
-               const vStream = video.captureStream();
-               if(vStream.getAudioTracks().length > 0) stream.addTrack(vStream.getAudioTracks()[0]);
-            }
-          }
-
           let mimeType = 'video/webm;codecs=vp8';
           if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/mp4';
 
@@ -1088,8 +1003,7 @@
           try {
             mediaRecorder = new MediaRecorder(stream, {
               mimeType: MediaRecorder.isTypeSupported(mimeType) ? mimeType : '',
-              videoBitsPerSecond: bitrate,
-              audioBitsPerSecond: 128000 // Đảm bảo ghi lại tiếng
+              videoBitsPerSecond: bitrate
             });
           } catch(err) {
             console.warn("MediaRecorder không hỗ trợ cấu hình này, dùng file gốc.", err);
@@ -1415,6 +1329,7 @@
         }
     };
 
+    /* --- TOI UU HOA HIEU SUAT LOAD FRIEND DATA (GOM QUERY CHONG N+1) --- */
     async function loadFriendsData() {
       const { data: relations } = await mySupabaseClient.from('friends')
         .select('id, sender_id, receiver_id, status')
@@ -1538,6 +1453,7 @@
       document.getElementById('reply-preview-content').textContent = '';
     }
 
+    /* --- TOI UU HOA HIEU SUAT RENDER MESSAGE (TRA TRANH DOM REPAINT NHIEU LAN, TANG TOC XU LY) --- */
     function renderMessage(msg) {
       const area = document.getElementById('messages-area');
       const isSent = msg.sender_id === currentProfile.id;
@@ -1730,40 +1646,61 @@
       else { await showAppModal("Xong!", "Đã gửi lời mời kết bạn thành thành công!"); document.getElementById('friend-search').value = ''; loadFriendsData(); }
     }
 
-    /* Đã code bổ sung đoạn bị thiếu của bạn ở dưới đây */
     async function respondRequest(relId, status) {
-      if (status === 'accepted') { 
-        await mySupabaseClient.from('friends').update({ status }).eq('id', relId); 
-      } else { 
-        await mySupabaseClient.from('friends').delete().eq('id', relId); 
-      }
+      if (status === 'accepted') { await mySupabaseClient.from('friends').update({ status }).eq('id', relId); } 
+      else { await mySupabaseClient.from('friends').delete().eq('id', relId); }
       loadFriendsData();
     }
-    
+
     function subscribeToChanges() {
-      mySupabaseClient.channel('custom-all-channel')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
-          if (activeFriendId && 
-             ((payload.new.sender_id === currentProfile.id && payload.new.receiver_id === activeFriendId) || 
-              (payload.new.sender_id === activeFriendId && payload.new.receiver_id === currentProfile.id))) {
-            
-            if (payload.eventType === 'INSERT') {
-              renderMessage(payload.new);
-              if (payload.new.receiver_id === currentProfile.id) {
-                mySupabaseClient.from('messages').update({ is_read: true }).eq('id', payload.new.id).then();
-              }
-              scrollToBottom();
-            } else if (payload.eventType === 'UPDATE') {
-              renderMessage(payload.new);
+      mySupabaseClient.channel('realtime_msg')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+          const msg = payload.new;
+          if (activeFriendId && ((msg.sender_id === activeFriendId && msg.receiver_id === currentProfile.id) || (msg.sender_id === currentProfile.id && msg.receiver_id === activeFriendId))) {
+            if(msg.receiver_id === currentProfile.id) { mySupabaseClient.from('messages').update({is_read: true}).eq('id', msg.id).then(()=>{}); msg.is_read = true; }
+            renderMessage(msg); scrollToBottom();
+          } else if (msg.receiver_id === currentProfile.id) {
+            const sender = friendsList.find(f => f.id === msg.sender_id);
+            if(sender) {
+              const lang = localStorage.getItem('boba_lang') || 'vi';
+              let nt = lang === 'en' ? 'New Message' : 'Tin nhắn mới';
+              let text = msg.content;
+              if (msg.is_sticker) text = '[Sticker]';
+              else if (msg.image_url) text = msg.image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? '[Video]' : (lang === 'en' ? '[Image]' : '[Hình ảnh]');
+              else if (msg.audio_url) text = lang === 'en' ? '[Voice Message 🎤]' : '[Tin nhắn thoại 🎤]';
+              showAppNotification(nt + ` từ ${sender.username}`, text); 
+              
+              const elMsgBox = document.getElementById(`last-msg-${msg.sender_id}`);
+              if(elMsgBox) { elMsgBox.textContent = text; elMsgBox.style.fontWeight = 'bold'; }
             }
           }
-          loadFriendsData();
         })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, payload => {
-          loadFriendsData();
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, payload => {
+          if (activeFriendId) {
+             const m = payload.new;
+             if((m.sender_id === activeFriendId && m.receiver_id === currentProfile.id) || (m.sender_id === currentProfile.id && m.receiver_id === activeFriendId)) {
+                renderMessage(m);
+             }
+          }
         })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friends' }, () => { loadFriendsData(); })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'friends' }, () => { loadFriendsData(); })
         .subscribe();
     }
+
+    setInterval(() => {
+      if (document.getElementById('chat-room').classList.contains('active')) {
+        document.querySelectorAll('.msg-countdown').forEach(el => {
+          const wrap = el.closest('.msg-wrapper');
+          if(wrap) { const id = wrap.id.replace('msg-wrapper-',''); const { data } = mySupabaseClient.from('messages').select('created_at').eq('id', id).single().then(res => { if(res.data) el.textContent = `⏳ ${getTimeLeft(res.data.created_at)}`; }); }
+        });
+      }
+    }, 60000);
+
+    mySupabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) { currentUser = session.user; loadApp(); } 
+      else { document.getElementById('auth-screen').classList.add('active'); applySettings(); }
+    });
 
   </script>
 </body>
