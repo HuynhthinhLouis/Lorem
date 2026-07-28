@@ -238,7 +238,6 @@
     
     .msg-img { max-width: 220px; border-radius: 16px; margin-top: 5px; cursor: pointer; border: 2px solid var(--white); box-shadow: 0 6px 15px rgba(0,0,0,0.15);}
     
-    /* CSS cho Video hiển thị trong tin nhắn */
     .msg-video { max-width: 240px; border-radius: 16px; margin-top: 5px; border: 2px solid var(--white); box-shadow: 0 6px 15px rgba(0,0,0,0.15); background: #000; outline: none; }
     
     .msg-sticker { max-width: 140px; height: auto; display: block; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15)); margin: 4px 0; border-radius: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
@@ -261,7 +260,7 @@
     .msg-status { font-weight: 800; color: var(--primary); }
     .msg-countdown { font-style: italic; display: flex; align-items: center; gap: 3px; }
 
-    /* Input Area - TỐI ƯU CHO MOBILE */
+    /* Input Area */
     .chat-input-area { padding: 10px 12px; background: var(--bg-glass-heavy); backdrop-filter: blur(12px); border-top: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; padding-bottom: max(10px, env(safe-area-inset-bottom)); position: relative; box-shadow: 0 -6px 25px rgba(0,0,0,0.06);}
     .icon-btn { background: var(--white); color: var(--primary); border: 1px solid rgba(255,255,255,0.7); width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.2s;}
     .icon-btn:active { transform: scale(0.9); }
@@ -270,7 +269,18 @@
     .chat-input-area button[type="submit"] { background: var(--primary); color: white; border: 1px solid rgba(255,255,255,0.4); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; flex-shrink: 0; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.6); transition: transform 0.2s;}
     .chat-input-area button[type="submit"]:active { transform: scale(0.9); }
     
-    /* Animation khi đang ghi âm */
+    /* Custom Voice Recording Bar CSS */
+    .voice-bar {
+      display: none; flex: 1; align-items: center; justify-content: space-between;
+      background: var(--bg-glass-heavy); border-radius: 20px; padding: 0 15px; height: 42px;
+      border: 1px solid #ff4d4d; box-shadow: inset 0 2px 5px rgba(0,0,0,0.03);
+    }
+    .voice-bar.active { display: flex; animation: slideUpVoice 0.3s ease; }
+    .visualizer-bar { width: 4px; background: #ff4d4d; border-radius: 2px; animation: soundWave 0.5s infinite alternate; }
+    
+    @keyframes soundWave { from { height: 4px; } to { height: 16px; } }
+    @keyframes slideUpVoice { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
     .icon-btn.recording {
       background: #ff4d4d;
       color: white;
@@ -283,7 +293,6 @@
       100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
     }
 
-    /* Style cho trình phát audio trong tin nhắn */
     .msg-audio {
       max-width: 220px;
       height: 44px;
@@ -579,12 +588,28 @@
         
         <button class="icon-btn" onclick="toggleStickers()">😊</button>
         
-        <button class="icon-btn" id="voice-btn" onclick="toggleVoiceRecord()" title="Ghi âm">🎤</button>
-        
+        <!-- Thanh Custom Voice Ghi Âm -->
+        <div id="voice-recording-bar" class="voice-bar">
+           <div style="display: flex; align-items: center; gap: 8px;">
+               <span style="color: #ff4d4d; animation: pulseRecording 1.5s infinite;">🔴</span>
+               <span id="voice-timer" style="font-weight: bold; color: var(--text-main); font-variant-numeric: tabular-nums;">00:00</span>
+           </div>
+           <div id="voice-visualizer" style="display: flex; align-items: center; gap: 3px; height: 20px;">
+               <div class="visualizer-bar" style="animation-delay: 0.1s;"></div>
+               <div class="visualizer-bar" style="animation-delay: 0.3s;"></div>
+               <div class="visualizer-bar" style="animation-delay: 0.2s;"></div>
+               <div class="visualizer-bar" style="animation-delay: 0.5s;"></div>
+               <div class="visualizer-bar" style="animation-delay: 0.4s;"></div>
+           </div>
+           <button onclick="cancelVoiceRecord()" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: #ff4d4d;" title="Hủy ghi âm">🗑️</button>
+        </div>
+
         <form id="chat-form" style="display: flex; flex: 1; gap: 8px; min-width: 0;">
           <input type="text" id="message-input" placeholder="Aa..." autocomplete="off">
           <button type="submit">➤</button>
         </form>
+        
+        <button class="icon-btn" id="voice-btn" onclick="toggleVoiceRecord()" title="Ghi âm">🎤</button>
       </div>
     </div>
 
@@ -838,46 +863,59 @@
     let replyingMessageId = null;
     let registerAvatarFile = null;
 
-    // --- TÍNH NĂNG GHI ÂM ĐÃ ĐƯỢC NÂNG CẤP CHẤT LƯỢNG ---
+    // --- TÍNH NĂNG GHI ÂM (TỐI ĐA CHẤT LƯỢNG & CUSTOM UI) ---
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
+    let cancelRecordingFlag = false;
+    let recordTimer;
+    let recordSeconds = 0;
 
     async function toggleVoiceRecord() {
       const voiceBtn = document.getElementById('voice-btn');
+      const form = document.getElementById('chat-form');
+      const voiceBar = document.getElementById('voice-recording-bar');
       
       if (!isRecording) {
         try {
-          // Bổ sung các thông số giúp tăng chất lượng lọc ồn và đầu vào mic
           const audioConstraints = {
             audio: {
               echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
+              noiseSuppression: false, // Tắt giảm ồn để giữ âm thanh thật nhất
+              autoGainControl: false,  // Tắt giới hạn âm lượng
               sampleRate: 48000,
               channelCount: 2
             }
           };
 
           const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+          let options = { audioBitsPerSecond: 320000 }; // 320 kbps cho chất lượng cao nhất
           
-          // Tăng Bitrate lên 128kbps để tránh bị rè và nén quá đà
-          let options = { audioBitsPerSecond: 128000 };
-          
-          // Kiểm tra và sử dụng chuẩn Opus (âm thanh chất lượng cao của webm) nếu trình duyệt có hỗ trợ
           if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
             options.mimeType = 'audio/webm;codecs=opus';
           }
           
           mediaRecorder = new MediaRecorder(stream, options);
           audioChunks = [];
+          cancelRecordingFlag = false;
           
           mediaRecorder.ondataavailable = e => {
             if (e.data.size > 0) audioChunks.push(e.data);
           };
           
           mediaRecorder.onstop = async () => {
-            // Đảm bảo tạo định dạng chính xác từ chunk đã ghi
+            clearInterval(recordTimer);
+            form.style.display = 'flex';
+            voiceBar.classList.remove('active');
+            voiceBtn.classList.remove('recording');
+            voiceBtn.textContent = '🎤'; 
+            
+            if (cancelRecordingFlag) {
+                cancelRecordingFlag = false;
+                stream.getTracks().forEach(track => track.stop());
+                return; // Không lưu nếu đã hủy
+            }
+            
             const mime = mediaRecorder.mimeType || 'audio/webm';
             const audioBlob = new Blob(audioChunks, { type: mime });
             stream.getTracks().forEach(track => track.stop()); 
@@ -886,20 +924,40 @@
           
           mediaRecorder.start();
           isRecording = true;
+          
+          // Chuyển giao diện sang Thanh Voice Custom
+          form.style.display = 'none';
+          voiceBar.classList.add('active');
           voiceBtn.classList.add('recording');
-          voiceBtn.textContent = '⏹️'; 
-          showAppNotification('Đang ghi âm...', 'Nhấn nút vuông để kết thúc và gửi 🎙️');
+          voiceBtn.textContent = '➤'; // Nút trở thành nút Gửi
+          
+          // Khởi động đồng hồ đếm giờ
+          recordSeconds = 0;
+          document.getElementById('voice-timer').innerText = '00:00';
+          recordTimer = setInterval(() => {
+              recordSeconds++;
+              const m = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+              const s = String(recordSeconds % 60).padStart(2, '0');
+              document.getElementById('voice-timer').innerText = `${m}:${s}`;
+          }, 1000);
           
         } catch (err) {
           console.error("Lỗi truy cập Micro:", err);
           showAppModal("Lỗi", "Không thể truy cập micro. Hãy kiểm tra quyền cấp cho trình duyệt!");
         }
       } else {
+        // Nhấn nút ➤ khi đang ghi âm -> Dừng và Gửi
         mediaRecorder.stop();
         isRecording = false;
-        voiceBtn.classList.remove('recording');
-        voiceBtn.textContent = '🎤';
       }
+    }
+
+    function cancelVoiceRecord() {
+        if (isRecording && mediaRecorder) {
+            cancelRecordingFlag = true;
+            mediaRecorder.stop();
+            isRecording = false;
+        }
     }
 
     async function uploadVoice(blob) {
@@ -923,11 +981,10 @@
       if (data) { 
         renderMessage(data); 
         scrollToBottom(); 
-        showAppNotification('Thành công', 'Đã gửi tin nhắn thoại!'); 
       }
     }
 
-    /* --- HAM NEN ANH BROWSER --- */
+    /* --- HÀM NÉN ẢNH --- */
     async function compressImage(file, maxWidth = 1280, quality = 0.75) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('image/')) return resolve(file);
@@ -968,7 +1025,7 @@
       });
     }
 
-    /* --- HAM NEN VIDEO BROWSER (Canvas + MediaRecorder) --- */
+    /* --- HÀM NÉN VIDEO BROWSER (ĐÃ SỬA LỖI MẤT TIẾNG) --- */
     async function compressVideo(file, targetWidth = 640, bitrate = 800000) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('video/')) return resolve(file);
@@ -977,8 +1034,8 @@
         
         const video = document.createElement('video');
         video.src = URL.createObjectURL(file);
-        video.muted = true;
-        video.playsInline = true;
+        video.playsInline = true; 
+        // Không set muted=true để tránh mất Audio Track
 
         video.onloadedmetadata = () => {
           let width = video.videoWidth || 640;
@@ -994,8 +1051,27 @@
           canvas.height = height;
           const ctx = canvas.getContext('2d');
 
+          // Cắt luồng Video từ Canvas
           const stream = canvas.captureStream(24);
           
+          // Trích xuất luồng Audio gốc bằng Web Audio API (Giúp lấy âm thanh mà không bị phát ồn ra loa)
+          try {
+              const AudioContext = window.AudioContext || window.webkitAudioContext;
+              if (AudioContext) {
+                  const audioCtx = new AudioContext();
+                  const source = audioCtx.createMediaElementSource(video);
+                  const destination = audioCtx.createMediaStreamDestination();
+                  source.connect(destination); // Route vào stream ảo thay vì loa
+                  
+                  const audioTracks = destination.stream.getAudioTracks();
+                  if (audioTracks.length > 0) {
+                      stream.addTrack(audioTracks[0]);
+                  }
+              }
+          } catch(err) {
+              console.warn("Không thể tách âm thanh Video bằng Web Audio API:", err);
+          }
+
           let mimeType = 'video/webm;codecs=vp8';
           if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/mp4';
 
@@ -1003,7 +1079,8 @@
           try {
             mediaRecorder = new MediaRecorder(stream, {
               mimeType: MediaRecorder.isTypeSupported(mimeType) ? mimeType : '',
-              videoBitsPerSecond: bitrate
+              videoBitsPerSecond: bitrate,
+              audioBitsPerSecond: 128000 // Thêm thông số âm thanh chất lượng tốt
             });
           } catch(err) {
             console.warn("MediaRecorder không hỗ trợ cấu hình này, dùng file gốc.", err);
@@ -1031,9 +1108,10 @@
               }
             }
             drawFrame();
-          }).catch(() => {
+          }).catch((err) => {
+            console.warn("Bị chặn Auto-play Video khi nén:", err);
             URL.revokeObjectURL(video.src);
-            resolve(file);
+            resolve(file); // Nếu thất bại, gửi file gốc
           });
 
           video.onended = () => { mediaRecorder.stop(); };
@@ -1329,7 +1407,6 @@
         }
     };
 
-    /* --- TOI UU HOA HIEU SUAT LOAD FRIEND DATA (GOM QUERY CHONG N+1) --- */
     async function loadFriendsData() {
       const { data: relations } = await mySupabaseClient.from('friends')
         .select('id, sender_id, receiver_id, status')
@@ -1453,7 +1530,6 @@
       document.getElementById('reply-preview-content').textContent = '';
     }
 
-    /* --- TOI UU HOA HIEU SUAT RENDER MESSAGE (TRA TRANH DOM REPAINT NHIEU LAN, TANG TOC XU LY) --- */
     function renderMessage(msg) {
       const area = document.getElementById('messages-area');
       const isSent = msg.sender_id === currentProfile.id;
