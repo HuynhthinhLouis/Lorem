@@ -149,6 +149,29 @@
     body.dark-mode .action-btn:hover, body.dark-mode .action-btn:active { background: rgba(255,255,255,0.05); }
     .action-btn.danger { color: #e57373; }
 
+    /* CSS cho Game Caro */
+    .tictactoe-cell {
+      background: var(--bg-glass-heavy);
+      border: 2px solid var(--glass-border);
+      border-radius: 16px;
+      height: 90px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.5rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.03), 0 4px 10px rgba(0,0,0,0.05);
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .tictactoe-cell:hover {
+      background: var(--white);
+      transform: scale(1.05);
+    }
+    .tictactoe-cell.x-mark { color: #E57373; } 
+    .tictactoe-cell.o-mark { color: #4FC3F7; } 
+
     /* App Container */
     .app-container { 
       width: 96%; max-width: 480px; background: var(--bg-glass); 
@@ -496,6 +519,24 @@
     </div>
   </div>
 
+  <!-- GAME OVERLAY -->
+  <div id="game-overlay" class="modal-overlay" style="z-index: 100004;" onclick="closeGame(event)">
+    <div class="modal-box" style="width: 95%; max-width: 380px; padding: 20px;">
+      <h3 class="modal-title" style="margin-bottom: 10px;">Boba Games 🎮</h3>
+      <div id="game-status" style="font-size: 1rem; font-weight: 800; color: var(--primary); margin-bottom: 15px;">Đang chờ người chơi...</div>
+      
+      <!-- Bàn cờ Caro 3x3 -->
+      <div id="tictactoe-board" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px;">
+        <!-- JavaScript sẽ tự động tạo các ô cờ ở đây -->
+      </div>
+      
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button class="modal-btn btn-cancel" onclick="closeGameDirect()">Thoát</button>
+        <button class="modal-btn btn-ok" id="btn-rematch" style="display: none;" onclick="requestRematch()">Chơi lại</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app-container">
     
     <div id="auth-screen" class="screen active auth-panel">
@@ -663,6 +704,7 @@
           <span id="chat-room-name"></span>
           <span id="chat-room-rank" class="rank-badge" style="display:none; font-size:0.65rem;"></span>
         </div>
+        <button class="nickname-btn" onclick="sendGameInvite('tictactoe')" title="Mời chơi Game">🎮</button>
         <button class="nickname-btn" onclick="setFriendNickname()" title="Đặt biệt danh">✏️</button>
       </div>
       
@@ -1559,21 +1601,66 @@
       await loadFriendsData();
       subscribeToChanges();
       
-      // Khởi tạo kênh Broadcast cho trạng thái gõ
-      const typingChannel = mySupabaseClient.channel('chat-room-events');
-      typingChannel.on('broadcast', { event: 'typing' }, payload => {
+      // =====================================
+      // KHỞI TẠO KÊNH CHAT ROOM (TYPING & GAME)
+      // =====================================
+      const chatRoomChannel = mySupabaseClient.channel('chat-room-events');
+      
+      // 1. Sự kiện gõ phím
+      chatRoomChannel.on('broadcast', { event: 'typing' }, payload => {
         if (activeFriendId && payload.payload.sender_id === activeFriendId && payload.payload.receiver_id === currentProfile.id) {
           const indicator = document.getElementById('typing-indicator');
           indicator.style.display = 'block';
           scrollToBottom(true);
-          
-          // Tự động ẩn sau 3 giây nếu không gõ tiếp
           clearTimeout(window.typingTimeout);
-          window.typingTimeout = setTimeout(() => {
-            indicator.style.display = 'none';
-          }, 3000);
+          window.typingTimeout = setTimeout(() => { indicator.style.display = 'none'; }, 3000);
         }
-      }).subscribe();
+      });
+
+      // 2. Sự kiện Game - Nhận lời mời
+      chatRoomChannel.on('broadcast', { event: 'game_invite' }, async payload => {
+        if (payload.payload.receiver_id === currentProfile.id) {
+           const senderName = getFriendDisplayName(payload.payload.sender_id, "Bạn bè");
+           const accept = await showAppModal("Lời mời chơi Game", `${senderName} đang rủ bạn chơi cờ Caro. Chơi luôn không?`, true);
+           if (accept) {
+             initTicTacToe('O'); // Người nhận lời mời luôn đi sau (O)
+             mySupabaseClient.channel('chat-room-events').send({
+               type: 'broadcast',
+               event: 'game_accept',
+               payload: { sender_id: currentProfile.id, receiver_id: payload.payload.sender_id }
+             });
+           }
+        }
+      });
+
+      // 3. Sự kiện Game - Chấp nhận lời mời
+      chatRoomChannel.on('broadcast', { event: 'game_accept' }, payload => {
+        if (payload.payload.receiver_id === currentProfile.id) {
+          showAppNotification("Đối thủ đã sẵn sàng!", "Ván đấu bắt đầu.");
+          initTicTacToe('X'); // Host đi trước (X)
+        }
+      });
+
+      // 4. Sự kiện Game - Cập nhật nước đi
+      chatRoomChannel.on('broadcast', { event: 'game_move' }, payload => {
+        if (payload.payload.receiver_id === currentProfile.id && isGameActive) {
+          gameState = payload.payload.board;
+          currentTurn = payload.payload.nextTurn;
+          renderBoard();
+          checkWinCondition();
+          updateGameStatusDisplay();
+        }
+      });
+
+      // 5. Sự kiện Game - Yêu cầu tái đấu
+      chatRoomChannel.on('broadcast', { event: 'game_rematch' }, payload => {
+        if (payload.payload.receiver_id === currentProfile.id) {
+           showAppNotification("Tái đấu", "Đối thủ muốn chơi lại. Lần này bạn sẽ đổi quân cờ!");
+           initTicTacToe(myGameSymbol === 'X' ? 'O' : 'X');
+        }
+      });
+
+      chatRoomChannel.subscribe();
     }
 
     window.receiveFCMToken = async function(token) {
@@ -1759,7 +1846,6 @@
         replyHTML = `<div class="msg-reply-node" onclick="scrollToMsg('${msg.reply_to_id}')">↪ ${r_text}</div>`;
       }
 
-      // -- TỐI ƯU GÁN DATA-CREATED-AT ĐỂ TÍNH COUNTDOWN LOCAL --
       let innerHtml = `
         ${replyHTML}
         ${mainContentHTML}
@@ -1805,6 +1891,7 @@
     }
 
     let activeReactionMsg = null; 
+    let activeReactionMsgId = null;
 
     function openReactionPicker(msg, el) {
       activeReactionMsg = msg;
@@ -1813,15 +1900,12 @@
       const overlay = document.getElementById('reaction-overlay');
       const box = document.getElementById('reaction-box');
       
-      // 1. Logic bật/tắt nút: Chỉ hiển thị nút "Thu hồi" nếu bạn là người gửi
       const isSentByMe = msg.sender_id === currentProfile.id;
       document.getElementById('btn-revoke-msg').style.display = isSentByMe ? 'flex' : 'none';
       
-      // 2. Logic bật/tắt nút: Chỉ cho phép sao chép nếu là tin nhắn văn bản
       const isTextMsg = !msg.is_sticker && !msg.image_url && !msg.audio_url;
       document.getElementById('btn-copy-msg').style.display = isTextMsg ? 'flex' : 'none';
 
-      // 3. Tính toán vị trí hiển thị bảng menu
       const rect = el.getBoundingClientRect();
       box.style.position = 'absolute'; 
       box.style.top = `${rect.top + 30}px`; 
@@ -1833,7 +1917,6 @@
       overlay.classList.add('active');
     }
 
-    // --- CÁC HÀM XỬ LÝ HÀNH ĐỘNG TIN NHẮN ---
     function copyActionMessage() {
       if(activeReactionMsg && activeReactionMsg.content) {
         navigator.clipboard.writeText(activeReactionMsg.content).then(() => {
@@ -1908,7 +1991,6 @@
       if (data) { renderMessage(data); scrollToBottom(); }
     };
     
-    // Lắng nghe sự kiện gõ phím để phát tín hiệu "đang gõ"
     document.getElementById('message-input').addEventListener('input', (e) => {
       if (activeFriendId && e.target.value.trim().length > 0) {
         mySupabaseClient.channel('chat-room-events').send({
@@ -2109,6 +2191,132 @@
         console.error("Lỗi API Youtube:", error);
         resultsContainer.innerHTML = '<div class="empty-state" style="color: #e57373;">Lỗi hệ thống hoặc chưa cấu hình API Key.</div>';
       }
+    }
+
+    // ==========================================
+    // HỆ THỐNG BOBA GAMES (MULTIPLAYER)
+    // ==========================================
+    let gameState = ['', '', '', '', '', '', '', '', ''];
+    let myGameSymbol = ''; // 'X' hoặc 'O'
+    let currentTurn = 'X';
+    let isGameActive = false;
+
+    function sendGameInvite(gameType) {
+      if (!activeFriendId) return;
+      showAppNotification('Đã gửi lời mời', 'Đang chờ đối thủ chấp nhận...');
+      
+      mySupabaseClient.channel('chat-room-events').send({
+        type: 'broadcast',
+        event: 'game_invite',
+        payload: { sender_id: currentProfile.id, receiver_id: activeFriendId, game: gameType }
+      });
+    }
+
+    function initTicTacToe(symbol) {
+      gameState = ['', '', '', '', '', '', '', '', ''];
+      myGameSymbol = symbol; 
+      currentTurn = 'X'; 
+      isGameActive = true;
+      
+      document.getElementById('btn-rematch').style.display = 'none';
+      document.getElementById('game-overlay').classList.add('active');
+      renderBoard();
+      updateGameStatusDisplay();
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('tictactoe-board');
+      board.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'tictactoe-cell';
+        if (gameState[i] === 'X') cell.classList.add('x-mark');
+        if (gameState[i] === 'O') cell.classList.add('o-mark');
+        cell.textContent = gameState[i];
+        cell.onclick = () => handleCellClick(i);
+        board.appendChild(cell);
+      }
+    }
+
+    function updateGameStatusDisplay() {
+      const statusEl = document.getElementById('game-status');
+      if (!isGameActive) return;
+      if (currentTurn === myGameSymbol) {
+        statusEl.textContent = 'Đến lượt của bạn!';
+        statusEl.style.color = '#8BC34A';
+      } else {
+        statusEl.textContent = 'Chờ đối thủ đi nước cờ...';
+        statusEl.style.color = 'var(--text-light)';
+      }
+    }
+
+    function handleCellClick(index) {
+      if (gameState[index] !== '' || !isGameActive || currentTurn !== myGameSymbol) return;
+
+      gameState[index] = myGameSymbol;
+      currentTurn = myGameSymbol === 'X' ? 'O' : 'X';
+      renderBoard();
+      checkWinCondition();
+      updateGameStatusDisplay();
+
+      mySupabaseClient.channel('chat-room-events').send({
+        type: 'broadcast',
+        event: 'game_move',
+        payload: { sender_id: currentProfile.id, receiver_id: activeFriendId, board: gameState, nextTurn: currentTurn }
+      });
+    }
+
+    function checkWinCondition() {
+      const winningConditions = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], 
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], 
+        [0, 4, 8], [2, 4, 6]             
+      ];
+
+      let roundWon = false;
+      let winnerSymbol = '';
+
+      for (let i = 0; i < winningConditions.length; i++) {
+        const [a, b, c] = winningConditions[i];
+        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+          roundWon = true;
+          winnerSymbol = gameState[a];
+          break;
+        }
+      }
+
+      const statusEl = document.getElementById('game-status');
+      if (roundWon) {
+        isGameActive = false;
+        document.getElementById('btn-rematch').style.display = 'block';
+        if (winnerSymbol === myGameSymbol) {
+          statusEl.textContent = '🎉 Bạn đã giành chiến thắng!';
+          statusEl.style.color = '#E57373';
+        } else {
+          statusEl.textContent = '😢 Bạn đã thua cmnr!';
+          statusEl.style.color = 'var(--text-light)';
+        }
+        return;
+      }
+
+      if (!gameState.includes('')) {
+        isGameActive = false;
+        document.getElementById('btn-rematch').style.display = 'block';
+        statusEl.textContent = '🤝 Hòa nhau rồi!';
+        statusEl.style.color = 'var(--primary)';
+      }
+    }
+
+    function closeGame(e) { if (e.target.id === 'game-overlay') closeGameDirect(); }
+    function closeGameDirect() { document.getElementById('game-overlay').classList.remove('active'); isGameActive = false; }
+
+    function requestRematch() {
+      initTicTacToe(myGameSymbol === 'X' ? 'O' : 'X'); 
+      mySupabaseClient.channel('chat-room-events').send({
+        type: 'broadcast',
+        event: 'game_rematch',
+        payload: { sender_id: currentProfile.id, receiver_id: activeFriendId }
+      });
     }
   </script>
 </body>
