@@ -376,6 +376,37 @@
 
     .msg-bubble, .msg-img, .msg-video, .msg-audio { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .msg-bubble:hover, .msg-img:hover, .msg-video:hover, .msg-audio:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important; }
+
+    /* ==========================================
+       TỐI ƯU HÓA HIỆU NĂNG CHO ĐIỆN THOẠI (CHỐNG LAG)
+       ========================================== */
+    @media (max-width: 768px) {
+      .app-container, .chat-room, .chat-room-header, .chat-input-area, .bottom-nav, .sticker-panel, #music-panel, #tab-music {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+      
+      .app-container, .chat-room { 
+        background: var(--bg-body-1) !important; 
+      }
+      .chat-room-header, .chat-input-area, .bottom-nav, .sticker-panel {
+        background: var(--bg-glass-heavy) !important;
+      }
+
+      .boba-icon-blur {
+        filter: none !important;
+        opacity: 0.15 !important;
+      }
+      
+      .app-container {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        width: 100% !important;
+        height: 100vh !important;
+        height: 100dvh !important; 
+      }
+    }
   </style>
 </head>
 <body>
@@ -1359,14 +1390,24 @@
     }
 
     function createBobas() {
-      const bg = document.getElementById('boba-bg'); bg.innerHTML = ''; 
+      const bg = document.getElementById('boba-bg'); 
+      bg.innerHTML = ''; 
       const icons = ['🧋', '🌸', '✨', '🤍', '🍡'];
-      for (let i = 0; i < 15; i++) {
-        const icon = document.createElement('div'); icon.className = 'boba-icon-blur';
+      
+      // Tối ưu: Nếu là điện thoại, chỉ hiển thị 6 icon, nếu là máy tính thì 15 icon
+      const isMobile = window.innerWidth <= 768;
+      const numIcons = isMobile ? 6 : 15; 
+      
+      for (let i = 0; i < numIcons; i++) {
+        const icon = document.createElement('div'); 
+        icon.className = 'boba-icon-blur';
         icon.innerText = icons[Math.floor(Math.random() * icons.length)];
-        icon.style.left = Math.random() * 100 + 'vw'; icon.style.top = Math.random() * 100 + 'vh';
-        icon.style.fontSize = (Math.random() * 1.5 + 1.8) + 'rem'; icon.style.animationDuration = (Math.random() * 4 + 4) + 's';
-        icon.style.animationDelay = `-${Math.random() * 3}s`; bg.appendChild(icon);
+        icon.style.left = Math.random() * 100 + 'vw'; 
+        icon.style.top = Math.random() * 100 + 'vh';
+        icon.style.fontSize = (Math.random() * 1.5 + 1.8) + 'rem'; 
+        icon.style.animationDuration = (Math.random() * 4 + 4) + 's';
+        icon.style.animationDelay = `-${Math.random() * 3}s`; 
+        bg.appendChild(icon);
       }
     }
     createBobas();
