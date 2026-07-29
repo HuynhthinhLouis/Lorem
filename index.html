@@ -60,7 +60,7 @@
     .boba-icon-blur {
       position: absolute; opacity: 0.25; filter: blur(2px);
       animation: floatSlow linear infinite alternate;
-      will-change: transform; /* Giúp trình duyệt tối ưu render phần cứng */
+      will-change: transform; 
     }
     @keyframes floatSlow {
       from { transform: translateY(0px) rotate(0deg); }
@@ -376,79 +376,6 @@
 
     .msg-bubble, .msg-img, .msg-video, .msg-audio { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .msg-bubble:hover, .msg-img:hover, .msg-video:hover, .msg-audio:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important; }
-
-    /* ========================================== */
-    /* YOUTUBE BOBA MUSIC STYLES                  */
-    /* ========================================== */
-    .floating-music-btn {
-      position: fixed;
-      bottom: 20px;
-      left: 20px; 
-      width: 55px;
-      height: 55px;
-      border-radius: 50%;
-      font-size: 24px;
-      z-index: 1000;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.3s ease;
-      background: var(--bg-glass-heavy); 
-      border: 1px solid var(--glass-border); 
-      color: var(--text-main);
-      cursor: pointer;
-    }
-    .floating-music-btn:hover {
-      transform: scale(1.1) rotate(10deg);
-    }
-
-    #music-panel {
-      position: fixed;
-      bottom: 85px;
-      left: 20px;
-      width: 300px;
-      z-index: 1001;
-      padding: 20px;
-      border-radius: 25px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      background: var(--bg-glass-heavy);
-      backdrop-filter: blur(16px); 
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--glass-border);
-      transition: all 0.3s ease-in-out;
-    }
-
-    #music-panel.hidden {
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(20px);
-    }
-
-    .music-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .glass-btn {
-      background: var(--white); border: 1px solid var(--glass-border); padding: 8px 12px;
-      border-radius: 12px; color: var(--text-main); font-weight: bold; cursor: pointer;
-      transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-    .glass-btn:active { transform: scale(0.95); }
-    
-    .glass-input {
-      background: var(--white); border: 1px solid var(--glass-border); padding: 10px;
-      border-radius: 12px; color: var(--text-main); outline: none; font-weight: 600;
-    }
-
-    @media (max-width: 768px) {
-      #music-panel {
-        width: calc(100% - 40px);
-        bottom: 80px;
-      }
-    }
   </style>
 </head>
 <body>
@@ -567,6 +494,36 @@
         <div class="tab-content" id="chat-list-container"></div>
       </div>
 
+      <!-- TAB NHẠC -->
+      <div id="tab-music" class="tab-pane">
+        <div class="header-bar"><span class="header-title">Boba Music 🎵</span></div>
+        <div class="tab-content" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+          
+          <!-- Thanh tìm kiếm -->
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="music-search-input" class="input-cute" style="flex: 1; padding: 12px; font-size: 0.95rem;" placeholder="Tìm tên bài hát, ca sĩ...">
+            <button class="btn-cute" style="padding: 0 15px;" onclick="performMusicSearch()">🔍</button>
+          </div>
+          
+          <!-- Trình phát video (Ẩn/Hiện tự động) -->
+          <div id="yt-player-container" style="border-radius: 15px; overflow: hidden; height: 200px; background: rgba(0,0,0,0.1); flex-shrink: 0; display: none;">
+            <div id="yt-player"></div>
+          </div>
+
+          <!-- Cụm nút điều khiển -->
+          <div class="music-controls" style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-yt-pause" class="btn-cute" style="flex: 1; background: var(--bg-glass-heavy); color: var(--text-main); border: 1px solid var(--glass-border);">⏸ Dừng</button>
+            <button id="btn-yt-play" class="btn-cute" style="flex: 1; background: var(--bg-glass-heavy); color: var(--text-main); border: 1px solid var(--glass-border);">▶ Tiếp tục</button>
+          </div>
+
+          <!-- Danh sách kết quả tìm kiếm -->
+          <h3 style="margin-top: 10px; font-size: 1.1rem; color: var(--text-main);">Kết quả tìm kiếm</h3>
+          <div id="music-search-results" style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="empty-state">Nhập tên bài hát để tìm kiếm nhé 🎧</div>
+          </div>
+        </div>
+      </div>
+
       <div id="tab-account" class="tab-pane">
         <div class="header-bar">
           <span class="header-title" data-i18n="nav_account">Hồ sơ 👤</span>
@@ -645,6 +602,9 @@
         <div class="nav-item active" onclick="switchTab('chats', this)">
           <span class="nav-icon">💬</span><span data-i18n="nav_chats_bot">Tin nhắn</span>
         </div>
+        <div class="nav-item" onclick="switchTab('music', this)">
+          <span class="nav-icon">🎵</span><span>Nhạc</span>
+        </div>
         <div class="nav-item" onclick="switchTab('account', this)">
           <span class="nav-icon">👤</span><span data-i18n="nav_account">Tài khoản</span>
         </div>
@@ -707,30 +667,6 @@
       </div>
     </div>
 
-  </div>
-
-  <button id="btn-music-toggle" class="floating-music-btn" title="Nghe nhạc YouTube">🎧</button>
-
-  <div id="music-panel" class="hidden">
-    <div class="music-header">
-      <h3 style="margin: 0; color: var(--primary); font-weight: 800;">Boba Music 🎵</h3>
-      <button id="btn-close-music" class="glass-btn" style="padding: 5px 10px;">✖</button>
-    </div>
-    
-    <div class="music-body" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
-      <input type="text" id="yt-link-input" placeholder="Dán link YouTube vào đây..." class="glass-input" style="width: 100%; box-sizing: border-box;" />
-      
-      <button id="btn-play-yt" class="glass-btn" style="background: var(--primary); color: var(--white); border: none;">Phát nhạc</button>
-      
-      <div class="music-controls" style="display: flex; gap: 10px; justify-content: center;">
-        <button id="btn-yt-pause" class="glass-btn" style="flex: 1;">⏸ Dừng</button>
-        <button id="btn-yt-play" class="glass-btn" style="flex: 1;">▶ Tiếp tục</button>
-      </div>
-      
-      <div id="yt-player-container" style="margin-top: 10px; border-radius: 15px; overflow: hidden; height: 150px; background: rgba(0,0,0,0.1);">
-        <div id="yt-player"></div>
-      </div>
-    </div>
   </div>
 
   <script>
@@ -1796,7 +1732,7 @@
       return `${h}h`;
     }
 
-    let activeReactionMsg = null; // Lưu thêm object tin nhắn để xử lý actions
+    let activeReactionMsg = null; 
 
     function openReactionPicker(msg, el) {
       activeReactionMsg = msg;
@@ -1820,7 +1756,7 @@
       box.style.left = `${rect.left}px`;
       
       if(rect.left > window.innerWidth / 2) box.style.left = `${rect.right - box.offsetWidth}px`;
-      if(rect.top + box.offsetHeight > window.innerHeight) box.style.top = `${rect.top - box.offsetHeight - 20}px`; // Đẩy lên nếu bị lấp dưới đáy
+      if(rect.top + box.offsetHeight > window.innerHeight) box.style.top = `${rect.top - box.offsetHeight - 20}px`; 
 
       overlay.classList.add('active');
     }
@@ -1840,7 +1776,6 @@
       if (!activeReactionMsgId) return;
       
       if (isRevoke) {
-        // Thu hồi (Xóa dữ liệu trên Supabase)
         const confirmed = await showAppModal("Thu hồi", "Bạn có chắc chắn muốn thu hồi tin nhắn này không?", true);
         if (confirmed) {
           const { error } = await mySupabaseClient.from('messages').delete().eq('id', activeReactionMsgId);
@@ -1852,7 +1787,6 @@
           }
         }
       } else {
-        // Xóa phía tôi (Chỉ ẩn giao diện UI tại client hiện tại)
         const confirmed = await showAppModal("Xóa ở phía tôi", "Tin nhắn này sẽ được xóa khỏi màn hình của bạn.", true);
         if (confirmed) {
           const el = document.getElementById(`msg-wrapper-${activeReactionMsgId}`);
@@ -1995,7 +1929,6 @@
         .subscribe();
     }
 
-    // -- TỐI ƯU INTERVAL ĐẾM NGƯỢC (TÍNH LOCAL KHÔNG CẦN TRUY VẤN DB) --
     setInterval(() => {
       if (document.getElementById('chat-room').classList.contains('active')) {
         document.querySelectorAll('.msg-countdown').forEach(el => {
@@ -2013,10 +1946,9 @@
     });
 
     // ==========================================
-    // THÊM TÍNH NĂNG BOBA MUSIC (YOUTUBE API)
+    // TÍNH NĂNG BOBA MUSIC (NẰM TRONG TAB)
     // ==========================================
 
-    // 1. Tải script YouTube IFrame API bất đồng bộ
     const ytScriptTag = document.createElement('script');
     ytScriptTag.src = "https://www.youtube.com/iframe_api";
     const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -2024,52 +1956,76 @@
 
     let ytPlayer;
 
-    // 2. Hàm callback mặc định của YouTube API khi load xong
     window.onYouTubeIframeAPIReady = function() {
       ytPlayer = new YT.Player('yt-player', {
         height: '100%',
         width: '100%',
-        videoId: 'jfKfPfyJRdk', // Mặc định để Lofi Girl stream
-        playerVars: {
-          'playsinline': 1,
-          'controls': 1 // Hiện thanh điều khiển của YT
-        }
+        videoId: '', 
+        playerVars: { 'playsinline': 1, 'controls': 1 }
       });
     };
 
-    // 3. Xử lý UI Ẩn/Hiện Panel
-    document.getElementById('btn-music-toggle').addEventListener('click', () => {
-      document.getElementById('music-panel').classList.toggle('hidden');
-    });
-    document.getElementById('btn-close-music').addEventListener('click', () => {
-      document.getElementById('music-panel').classList.add('hidden');
-    });
-
-    // 4. Xử lý trích xuất ID và Phát nhạc từ Link
-    document.getElementById('btn-play-yt').addEventListener('click', () => {
-      const link = document.getElementById('yt-link-input').value.trim();
-      const videoId = extractVideoID(link);
-      
-      if (videoId && ytPlayer && ytPlayer.loadVideoById) {
-        ytPlayer.loadVideoById(videoId);
-      } else {
-        alert("🧋 Bạn nhập sai link YouTube rồi, thử lại nhé!");
-      }
-    });
-
-    // 5. Nút điều khiển nhanh
     document.getElementById('btn-yt-pause').addEventListener('click', () => {
       if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
     });
+    
     document.getElementById('btn-yt-play').addEventListener('click', () => {
       if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo();
     });
 
-    // Hàm regex lấy Video ID từ mọi định dạng link YouTube
-    function extractVideoID(url) {
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = url.match(regExp);
-      return (match && match[2].length === 11) ? match[2] : null;
+    document.getElementById('music-search-input').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') performMusicSearch();
+    });
+
+    // Hàm Tìm Kiếm - HÃY ĐIỀN YOUTUBE DATA API KEY VÀO ĐÂY
+    const YOUTUBE_API_KEY = 'ĐIỀN_YOUTUBE_DATA_API_KEY_CỦA_BẠN_VÀO_ĐÂY';
+
+    async function performMusicSearch() {
+      const query = document.getElementById('music-search-input').value.trim();
+      if (!query) return;
+      
+      const resultsContainer = document.getElementById('music-search-results');
+      resultsContainer.innerHTML = '<div class="empty-state">Đang tìm kiếm... ⏳</div>';
+
+      try {
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`);
+        const data = await response.json();
+
+        if (data.items && data.items.length > 0) {
+          resultsContainer.innerHTML = '';
+          data.items.forEach(item => {
+            const videoId = item.id.videoId;
+            const title = item.snippet.title;
+            const channel = item.snippet.channelTitle;
+            const thumb = item.snippet.thumbnails.default.url;
+
+            const resultEl = document.createElement('div');
+            resultEl.className = 'friend-item'; 
+            resultEl.style.margin = '0';
+            resultEl.innerHTML = `
+              <img class="avatar" style="border-radius: 12px; width: 75px; height: 55px; object-fit: cover;" src="${thumb}">
+              <div class="friend-info">
+                <div class="friend-name" style="font-size: 0.95rem; line-height: 1.3;">${title}</div>
+                <div class="last-msg" style="color: var(--primary);">${channel}</div>
+              </div>
+            `;
+            
+            resultEl.onclick = () => {
+              if (ytPlayer && ytPlayer.loadVideoById) {
+                ytPlayer.loadVideoById(videoId);
+                document.getElementById('yt-player-container').style.display = 'block'; 
+                showAppNotification('Đang phát 🎵', title);
+              }
+            };
+            resultsContainer.appendChild(resultEl);
+          });
+        } else {
+          resultsContainer.innerHTML = '<div class="empty-state">Không tìm thấy bài hát này 😢</div>';
+        }
+      } catch (error) {
+        console.error("Lỗi API Youtube:", error);
+        resultsContainer.innerHTML = '<div class="empty-state" style="color: #e57373;">Lỗi hệ thống hoặc chưa cấu hình API Key.</div>';
+      }
     }
   </script>
 </body>
