@@ -1190,7 +1190,7 @@
       }
     }
 
-    /* --- HÀM NÉN ẢNH --- */
+    /* --- HÀM NÉN ẢNH (ĐÃ FIX LỖI CRASH TRÊN DI ĐỘNG) --- */
     async function compressImage(file, maxWidth = 1280, quality = 0.75) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('image/')) return resolve(file);
@@ -1215,9 +1215,15 @@
             canvas.toBlob(
               (blob) => {
                 if (!blob) return resolve(file);
-                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
-                console.log(`📸 Nén ảnh: ${(file.size/1024/1024).toFixed(2)}MB -> ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
-                resolve(compressedFile);
+                const newName = (file.name || "image").replace(/\.[^/.]+$/, "") + ".jpg";
+                try {
+                    const compressedFile = new File([blob], newName, { type: 'image/jpeg' });
+                    console.log(`📸 Nén ảnh: ${(file.size/1024/1024).toFixed(2)}MB -> ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
+                    resolve(compressedFile);
+                } catch(err) {
+                    blob.name = newName;
+                    resolve(blob);
+                }
               },
               'image/jpeg',
               quality
@@ -1231,7 +1237,7 @@
       });
     }
 
-    /* --- HÀM NÉN VIDEO --- ĐÃ CẬP NHẬT GIẢM NÉN (CHẤT LƯỢNG CAO) */
+    /* --- HÀM NÉN VIDEO --- */
     async function compressVideo(file, targetWidth = 1280, bitrate = 2500000) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('video/')) return resolve(file);
@@ -1335,29 +1341,37 @@
 
     async function updateProfileAvatar(e) {
       let file = e.target.files[0];
-      if (!file || !currentProfile) return;
+      const fileInput = e.target;
+      if (!file || !currentProfile) { fileInput.value = ''; return; }
   
       showAppNotification('Đang xử lý...', 'Đang nén & tải ảnh đại diện lên máy chủ');
-      file = await compressImage(file, 800, 0.8);
-  
-      const fileExt = file.name.split('.').pop();
-      const fileName = `avatar_${currentProfile.id}_${Date.now()}.${fileExt}`;
-  
-      const { error: uploadError } = await mySupabaseClient.storage.from('avatars').upload(fileName, file);
-      if (uploadError) { await showAppModal("Lỗi tải ảnh", uploadError.message); return; }
-  
-      const imgUrl = mySupabaseClient.storage.from('avatars').getPublicUrl(fileName).data.publicUrl;
-  
-      const { error: updateError } = await mySupabaseClient.from('profiles')
-        .update({ avatar_url: imgUrl })
-        .eq('id', currentProfile.id);
-  
-      if (updateError) { await showAppModal("Lỗi cập nhật", updateError.message); return; }
-  
-      currentProfile.avatar_url = imgUrl;
-      document.getElementById('my-avatar').src = imgUrl;
-      showAppNotification('Thành công', 'Đã cập nhật ảnh đại diện mới!');
-      loadFriendsData();
+      try {
+          file = await compressImage(file, 800, 0.8);
+      
+          const safeName = file.name || 'avatar.jpg';
+          const fileExt = safeName.includes('.') ? safeName.split('.').pop() : 'jpg';
+          const fileName = `avatar_${currentProfile.id}_${Date.now()}.${fileExt}`;
+      
+          const { error: uploadError } = await mySupabaseClient.storage.from('avatars').upload(fileName, file);
+          if (uploadError) { await showAppModal("Lỗi tải ảnh", uploadError.message); return; }
+      
+          const imgUrl = mySupabaseClient.storage.from('avatars').getPublicUrl(fileName).data.publicUrl;
+      
+          const { error: updateError } = await mySupabaseClient.from('profiles')
+            .update({ avatar_url: imgUrl })
+            .eq('id', currentProfile.id);
+      
+          if (updateError) { await showAppModal("Lỗi cập nhật", updateError.message); return; }
+      
+          currentProfile.avatar_url = imgUrl;
+          document.getElementById('my-avatar').src = imgUrl;
+          showAppNotification('Thành công', 'Đã cập nhật ảnh đại diện mới!');
+          loadFriendsData();
+      } catch (err) {
+          console.error(err);
+      } finally {
+          fileInput.value = '';
+      }
     }
 
     const stickerData = {
@@ -1468,7 +1482,6 @@
       bg.innerHTML = ''; 
       const icons = ['🧋', '🌸', '✨', '🤍', '🍡'];
       
-      // Tối ưu: Nếu là điện thoại, chỉ hiển thị 6 icon, nếu là máy tính thì 15 icon
       const isMobile = window.innerWidth <= 768;
       const numIcons = isMobile ? 6 : 15; 
       
@@ -1586,7 +1599,6 @@
 
       document.getElementById('my-name').textContent = currentProfile.username;
       
-      // -- THÊM TÍNH NĂNG RANK VÀO PROFILE --
       const myRankBadge = document.getElementById('my-rank');
       if (currentRank) {
         myRankBadge.style.display = 'inline-block';
@@ -1618,12 +1630,8 @@
       await loadFriendsData();
       subscribeToChanges();
       
-      // =====================================
-      // KHỞI TẠO KÊNH CHAT ROOM (TYPING & GAME)
-      // =====================================
       const chatRoomChannel = mySupabaseClient.channel('chat-room-events');
       
-      // 1. Sự kiện gõ phím
       chatRoomChannel.on('broadcast', { event: 'typing' }, payload => {
         if (activeFriendId && payload.payload.sender_id === activeFriendId && payload.payload.receiver_id === currentProfile.id) {
           const indicator = document.getElementById('typing-indicator');
@@ -1634,13 +1642,12 @@
         }
       });
 
-      // 2. Sự kiện Game - Nhận lời mời
       chatRoomChannel.on('broadcast', { event: 'game_invite' }, async payload => {
         if (payload.payload.receiver_id === currentProfile.id) {
            const senderName = getFriendDisplayName(payload.payload.sender_id, "Bạn bè");
            const accept = await showAppModal("Lời mời chơi Game", `${senderName} đang rủ bạn chơi cờ Caro. Chơi luôn không?`, true);
            if (accept) {
-             initTicTacToe('O'); // Người nhận lời mời luôn đi sau (O)
+             initTicTacToe('O'); 
              mySupabaseClient.channel('chat-room-events').send({
                type: 'broadcast',
                event: 'game_accept',
@@ -1650,15 +1657,13 @@
         }
       });
 
-      // 3. Sự kiện Game - Chấp nhận lời mời
       chatRoomChannel.on('broadcast', { event: 'game_accept' }, payload => {
         if (payload.payload.receiver_id === currentProfile.id) {
           showAppNotification("Đối thủ đã sẵn sàng!", "Ván đấu bắt đầu.");
-          initTicTacToe('X'); // Host đi trước (X)
+          initTicTacToe('X'); 
         }
       });
 
-      // 4. Sự kiện Game - Cập nhật nước đi
       chatRoomChannel.on('broadcast', { event: 'game_move' }, payload => {
         if (payload.payload.receiver_id === currentProfile.id && isGameActive) {
           gameState = payload.payload.board;
@@ -1669,7 +1674,6 @@
         }
       });
 
-      // 5. Sự kiện Game - Yêu cầu tái đấu
       chatRoomChannel.on('broadcast', { event: 'game_rematch' }, payload => {
         if (payload.payload.receiver_id === currentProfile.id) {
            showAppNotification("Tái đấu", "Đối thủ muốn chơi lại. Lần này bạn sẽ đổi quân cờ!");
@@ -1689,7 +1693,6 @@
         }
     };
 
-    // --- TỐI ƯU HÓA: GOM NHÓM DOM CẬP NHẬT TRONG JS (BATCHING) ---
     async function loadFriendsData() {
       const { data: relations } = await mySupabaseClient.from('friends')
         .select('id, sender_id, receiver_id, status')
@@ -2014,7 +2017,6 @@
       if (data) { renderMessage(data); scrollToBottom(); }
     };
     
-    // --- TỐI ƯU HÓA: DEBOUNCE SỰ KIỆN GÕ PHÍM ---
     function debounce(func, timeout = 500){
       let timer;
       return (...args) => {
@@ -2040,34 +2042,57 @@
 
     function triggerUpload() { document.getElementById('file-upload').click(); }
     
+    // --- HÀM UPLOAD MEDIA ĐÃ ĐƯỢC FIX DỌN DẸP INPUT VALUE ---
     async function uploadMedia(e) {
       let file = e.target.files[0]; 
-      if (!file || !activeFriendId) return;
+      const fileInput = e.target;
+      if (!file || !activeFriendId) { fileInput.value = ''; return; }
   
       let targetBucket = 'chat_images';
+      let isImage = file.type.startsWith('image/');
+      let isVideo = file.type.startsWith('video/');
 
-      if (file.type.startsWith('image/')) {
-        file = await compressImage(file, 1280, 0.75);
-        targetBucket = 'chat_images';
-      } else if (file.type.startsWith('video/')) {
-        file = await compressVideo(file, 1280, 2500000); // GIẢM MỨC NÉN 
-        targetBucket = 'chat_videos';
+      showAppNotification('Chuẩn bị...', `Đang xử lý ${isImage ? 'ảnh' : 'video'}...`);
+
+      try {
+          if (isImage) {
+            file = await compressImage(file, 1280, 0.75);
+            targetBucket = 'chat_images';
+          } else if (isVideo) {
+            file = await compressVideo(file, 1280, 2500000);
+            targetBucket = 'chat_videos';
+          }
+          
+          const safeName = file.name || 'media.file';
+          let fileExt = safeName.includes('.') ? safeName.split('.').pop() : (isImage ? 'jpg' : 'mp4');
+          const fileName = `chat_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+          
+          showAppNotification('Đang gửi...', `Đang tải ${isImage ? 'ảnh' : 'video'} lên máy chủ 🚀`);
+
+          const { error: upErr } = await mySupabaseClient.storage.from(targetBucket).upload(fileName, file);
+          if (upErr) { await showAppModal("Lỗi tải lên", upErr.message); return; }
+          
+          const url = mySupabaseClient.storage.from(targetBucket).getPublicUrl(fileName).data.publicUrl;
+
+          const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: url };
+          if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
+          
+          const { data, error } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
+          if (error) {
+              console.error("Lỗi insert DB:", error);
+              showAppNotification("Lỗi", "Không thể lưu tin nhắn vào DB!");
+          } else if (data) { 
+              renderMessage(data); 
+              scrollToBottom(); 
+              showAppNotification('Thành công', 'Đã gửi file xong!'); 
+          }
+      } catch (err) {
+          console.error("Lỗi xử lý file:", err);
+          showAppNotification("Lỗi", "Có lỗi xảy ra khi xử lý file!");
+      } finally {
+          // QUAN TRỌNG: Dọn dẹp input để có thể gửi lại cùng 1 file liên tục
+          fileInput.value = '';
       }
-      
-      const fileExt = file.name.split('.').pop(); 
-      const fileName = `chat_${Date.now()}.${fileExt}`;
-      
-      showAppNotification('Đang gửi...', `Đang xử lý & gửi ${file.type.startsWith('image/') ? 'ảnh' : 'video'} lên máy chủ`);
-
-      const { error: upErr } = await mySupabaseClient.storage.from(targetBucket).upload(fileName, file);
-      if (upErr) { await showAppModal("Lỗi tải lên", upErr.message); return; }
-      
-      const url = mySupabaseClient.storage.from(targetBucket).getPublicUrl(fileName).data.publicUrl;
-
-      const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: url };
-      if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
-      const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
-      if (data) { renderMessage(data); scrollToBottom(); showAppNotification('Thành công', 'Đã gửi file xong!'); }
     }
 
     async function sendFriendRequest() {
@@ -2147,10 +2172,6 @@
       else { document.getElementById('auth-screen').classList.add('active'); applySettings(); }
     });
 
-    // ==========================================
-    // TÍNH NĂNG BOBA MUSIC (NẰM TRONG TAB)
-    // ==========================================
-
     let ytPlayer;
 
     window.onYouTubeIframeAPIReady = function() {
@@ -2174,7 +2195,6 @@
       if (e.key === 'Enter') performMusicSearch();
     });
 
-    // Hàm Tìm Kiếm - HÃY ĐIỀN YOUTUBE DATA API KEY VÀO ĐÂY
     const YOUTUBE_API_KEY = 'AIzaSyAiiUvM07eyeJeXbFq2eHG4sM04kaIt2dw';
 
     async function performMusicSearch() {
@@ -2225,11 +2245,8 @@
       }
     }
 
-    // ==========================================
-    // HỆ THỐNG BOBA GAMES (MULTIPLAYER)
-    // ==========================================
     let gameState = ['', '', '', '', '', '', '', '', ''];
-    let myGameSymbol = ''; // 'X' hoặc 'O'
+    let myGameSymbol = ''; 
     let currentTurn = 'X';
     let isGameActive = false;
 
