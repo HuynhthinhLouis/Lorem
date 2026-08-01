@@ -410,25 +410,32 @@
        TỐI ƯU HÓA HIỆU NĂNG CHO ĐIỆN THOẠI (CHỐNG LAG)
        ========================================== */
     @media (max-width: 768px) {
-      .app-container, .chat-room, .chat-room-header, .chat-input-area, .bottom-nav, .sticker-panel, #music-panel, #tab-music {
+      /* Tắt toàn bộ hiệu ứng mờ và bóng đổ trên thiết bị di động */
+      * {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
       }
       
-      .app-container, .chat-room { 
+      /* Giảm thiểu độ phức tạp của background */
+      body, .app-container, .chat-room { 
         background: var(--bg-body-1) !important; 
       }
-      .chat-room-header, .chat-input-area, .bottom-nav, .sticker-panel {
+      
+      .chat-room-header, .chat-input-area, .bottom-nav, .sticker-panel, #music-panel, #tab-music {
         background: var(--bg-glass-heavy) !important;
+        border: 1px solid var(--glass-border) !important;
       }
 
+      /* Đơn giản hóa animation nền */
       .boba-icon-blur {
         filter: none !important;
-        opacity: 0.15 !important;
+        opacity: 0.1 !important;
+        animation: floatSlow 8s linear infinite alternate !important;
       }
       
       .app-container {
-        box-shadow: none !important;
         border: none !important;
         border-radius: 0 !important;
         width: 100% !important;
@@ -885,11 +892,21 @@
       return `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede`;
     }
 
+    let ytApiLoaded = false;
     function switchTab(tabId, el) {
       document.querySelectorAll('.tab-pane').forEach(t => t.style.display = 'none');
       document.getElementById(`tab-${tabId}`).style.display = 'flex';
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       el.classList.add('active');
+
+      // Tải Lazy API Youtube chỉ khi vào tab Music
+      if (tabId === 'music' && !ytApiLoaded) {
+        const ytScriptTag = document.createElement('script');
+        ytScriptTag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(ytScriptTag, firstScriptTag);
+        ytApiLoaded = true;
+      }
     }
 
     function showAppNotification(title, msg) {
@@ -1672,6 +1689,7 @@
         }
     };
 
+    // --- TỐI ƯU HÓA: GOM NHÓM DOM CẬP NHẬT TRONG JS (BATCHING) ---
     async function loadFriendsData() {
       const { data: relations } = await mySupabaseClient.from('friends')
         .select('id, sender_id, receiver_id, status')
@@ -1680,7 +1698,11 @@
       const reqList = document.getElementById('friend-requests-list'); 
       const accList = document.getElementById('account-friend-list'); 
       const chatList = document.getElementById('chat-list-container');
-      reqList.innerHTML = accList.innerHTML = chatList.innerHTML = ''; 
+      
+      let reqHTML = '';
+      let accHTML = '';
+      let chatHTML = '';
+      
       friendsList = [];
       const lang = localStorage.getItem('boba_lang') || 'vi';
 
@@ -1713,10 +1735,10 @@
         }
 
         if (rel.status === 'pending' && rel.receiver_id === currentProfile.id) {
-          reqList.innerHTML += `<div class="friend-item"><img class="avatar" loading="lazy" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div><div class="request-btn-group"><button class="btn-accept" onclick="respondRequest('${rel.id}', 'accepted')">✔</button><button class="btn-reject" onclick="respondRequest('${rel.id}', 'rejected')">✖</button></div></div></div>`;
+          reqHTML += `<div class="friend-item"><img class="avatar" loading="lazy" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div><div class="request-btn-group"><button class="btn-accept" onclick="respondRequest('${rel.id}', 'accepted')">✔</button><button class="btn-reject" onclick="respondRequest('${rel.id}', 'rejected')">✖</button></div></div></div>`;
         } else if (rel.status === 'accepted') {
           friendsList.push(fProfile);
-          accList.innerHTML += `<div class="friend-item"><img class="avatar" loading="lazy" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div></div></div>`;
+          accHTML += `<div class="friend-item"><img class="avatar" loading="lazy" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml} <span class="friend-tag">#${fProfile.tag}</span></div></div></div>`;
             
           const { data: lastMsg } = await mySupabaseClient.from('messages')
             .select('content, is_sticker, image_url, audio_url')
@@ -1732,11 +1754,12 @@
             else if(lastMsg[0].audio_url) text = lang === 'en' ? '[Voice Message 🎤]' : '[Tin nhắn thoại 🎤]'; 
             else text = lastMsg[0].content;
           }
-          chatList.innerHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}', '${friendColor}', '${fProfile.ranks ? fProfile.ranks.name : ''}', '${fProfile.avatar_url || ''}')"><img class="avatar" loading="lazy" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
+          chatHTML += `<div class="friend-item" onclick="openChat('${fProfile.id}', '${fProfile.username}', '${fProfile.tag}', '${friendColor}', '${fProfile.ranks ? fProfile.ranks.name : ''}', '${fProfile.avatar_url || ''}')"><img class="avatar" loading="lazy" src="${avatar}"><div class="friend-info"><div class="friend-name" style="color:${friendColor}">${displayName} ${rankHtml}</div><div class="last-msg" id="last-msg-${fProfile.id}">${text}</div></div></div>`;
         }
       }
-      if(reqList.innerHTML === '') reqList.innerHTML = `<div class="empty-state">${lang==='en'?'No requests':'Không có lời mời nào'}</div>`;
-      if(accList.innerHTML === '') accList.innerHTML = `<div class="empty-state">${lang==='en'?'No friends yet':'Chưa có bạn bè'}</div>`;
+      reqList.innerHTML = reqHTML !== '' ? reqHTML : `<div class="empty-state">${lang==='en'?'No requests':'Không có lời mời nào'}</div>`;
+      accList.innerHTML = accHTML !== '' ? accHTML : `<div class="empty-state">${lang==='en'?'No friends yet':'Chưa có bạn bè'}</div>`;
+      chatList.innerHTML = chatHTML !== '' ? chatHTML : `<div class="empty-state">${lang==='en'?'Empty...':'Trống trơn à...'}</div>`;
     }
 
     async function openChat(fid, name, tag, rankColor, rankName, customAvatarUrl) {
@@ -1991,13 +2014,27 @@
       if (data) { renderMessage(data); scrollToBottom(); }
     };
     
-    document.getElementById('message-input').addEventListener('input', (e) => {
-      if (activeFriendId && e.target.value.trim().length > 0) {
+    // --- TỐI ƯU HÓA: DEBOUNCE SỰ KIỆN GÕ PHÍM ---
+    function debounce(func, timeout = 500){
+      let timer;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+      };
+    }
+    const sendTypingEvent = debounce(() => {
+      if (activeFriendId) {
         mySupabaseClient.channel('chat-room-events').send({
           type: 'broadcast',
           event: 'typing',
           payload: { sender_id: currentProfile.id, receiver_id: activeFriendId }
         });
+      }
+    }, 1000);
+
+    document.getElementById('message-input').addEventListener('input', (e) => {
+      if (activeFriendId && e.target.value.trim().length > 0) {
+        sendTypingEvent();
       }
     });
 
@@ -2113,11 +2150,6 @@
     // ==========================================
     // TÍNH NĂNG BOBA MUSIC (NẰM TRONG TAB)
     // ==========================================
-
-    const ytScriptTag = document.createElement('script');
-    ytScriptTag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(ytScriptTag, firstScriptTag);
 
     let ytPlayer;
 
