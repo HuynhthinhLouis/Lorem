@@ -1168,6 +1168,12 @@
 
     async function uploadVoice(blob) {
       if (!activeFriendId) return;
+
+      // Chụp lại state giống uploadMedia
+      const targetFriendId = activeFriendId;
+      const targetReplyId = replyingMessageId;
+      
+      if (replyingMessageId) cancelReplyMode();
       
       showAppNotification('Đang gửi...', 'Đang tải tin nhắn thoại lên máy chủ 🚀');
       const fileName = `voice_${Date.now()}.webm`;
@@ -1180,13 +1186,16 @@
       
       const url = mySupabaseClient.storage.from('chat_audio').getPublicUrl(fileName).data.publicUrl;
       
-      const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, audio_url: url };
-      if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
+      const msgObj = { sender_id: currentProfile.id, receiver_id: targetFriendId, audio_url: url };
+      if (targetReplyId) { msgObj.reply_to_id = targetReplyId; }
       
       const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
       if (data) { 
-        renderMessage(data); 
-        scrollToBottom(); 
+        // Chỉ render nếu chưa chuyển sang chat với người khác
+        if (activeFriendId === targetFriendId) {
+          renderMessage(data); 
+          scrollToBottom(); 
+        }
       }
     }
 
@@ -1235,8 +1244,6 @@
     async function compressVideo(file, targetWidth = 1280, bitrate = 2500000) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('video/')) return resolve(file);
-        
-        showAppNotification('Đang nén video...', 'Video đang được nén tối ưu dung lượng 🎬');
         
         const video = document.createElement('video');
         video.src = URL.createObjectURL(file);
@@ -2043,31 +2050,52 @@
     async function uploadMedia(e) {
       let file = e.target.files[0]; 
       if (!file || !activeFriendId) return;
-  
+
+      // 1. "CHỤP LẠI" ID NGƯỜI NHẬN & ID TIN NHẮN PHẢN HỒI (Tránh lỗi chuyển chat)
+      const targetFriendId = activeFriendId;
+      const targetReplyId = replyingMessageId;
+      
+      // Xóa UI trả lời ngay lập tức để người dùng không bị kẹt
+      if (replyingMessageId) cancelReplyMode();
+
+      // 2. HIỆN THÔNG BÁO NGAY LẬP TỨC TRƯỚC KHI NẾN
+      const isImage = file.type.startsWith('image/');
+      showAppNotification('Đang xử lý...', `Đang nén ${isImage ? 'ảnh' : 'video'} (tránh lag máy)... ⏳`);
+
       let targetBucket = 'chat_images';
 
-      if (file.type.startsWith('image/')) {
-        file = await compressImage(file, 1280, 0.75);
+      if (isImage) {
+        file = await compressImage(file, 1280, 0.75); // Tiến trình nén chạy ngầm
         targetBucket = 'chat_images';
       } else if (file.type.startsWith('video/')) {
-        file = await compressVideo(file, 1280, 2500000); // GIẢM MỨC NÉN 
+        file = await compressVideo(file, 1280, 2500000); 
         targetBucket = 'chat_videos';
       }
       
       const fileExt = file.name.split('.').pop(); 
       const fileName = `chat_${Date.now()}.${fileExt}`;
       
-      showAppNotification('Đang gửi...', `Đang xử lý & gửi ${file.type.startsWith('image/') ? 'ảnh' : 'video'} lên máy chủ`);
+      // Cập nhật thông báo sang trạng thái upload
+      showAppNotification('Đang gửi...', `Đang tải ${isImage ? 'ảnh' : 'video'} lên máy chủ 🚀`);
 
       const { error: upErr } = await mySupabaseClient.storage.from(targetBucket).upload(fileName, file);
       if (upErr) { await showAppModal("Lỗi tải lên", upErr.message); return; }
       
       const url = mySupabaseClient.storage.from(targetBucket).getPublicUrl(fileName).data.publicUrl;
 
-      const msgObj = { sender_id: currentProfile.id, receiver_id: activeFriendId, image_url: url };
-      if (replyingMessageId) { msgObj.reply_to_id = replyingMessageId; cancelReplyMode(); }
+      // 3. SỬ DỤNG targetFriendId ĐÃ LƯU TỪ TRƯỚC
+      const msgObj = { sender_id: currentProfile.id, receiver_id: targetFriendId, image_url: url };
+      if (targetReplyId) { msgObj.reply_to_id = targetReplyId; }
+      
       const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
-      if (data) { renderMessage(data); scrollToBottom(); showAppNotification('Thành công', 'Đã gửi file xong!'); }
+      if (data) { 
+        // 4. KIỂM TRA: Chỉ render tin nhắn ra màn hình nếu đang mở ĐÚNG khung chat đó
+        if (activeFriendId === targetFriendId) {
+          renderMessage(data); 
+          scrollToBottom(); 
+        }
+        showAppNotification('Thành công', 'Đã gửi file xong! ✅'); 
+      }
     }
 
     async function sendFriendRequest() {
