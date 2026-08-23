@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* Bảng màu Sáng (Mặc định) */
       --bg-glass: rgba(253, 248, 245, 0.65); 
       --bg-glass-heavy: rgba(255, 255, 255, 0.75);
       --glass-border: rgba(255, 255, 255, 0.8);
@@ -25,7 +24,6 @@
       --bg-body-2: #f4e8df;
     }
 
-    /* Bảng màu Tối (Dark Mode) */
     body.dark-mode {
       --bg-glass: rgba(30, 25, 22, 0.75); 
       --bg-glass-heavy: rgba(45, 35, 30, 0.85);
@@ -55,7 +53,6 @@
       transition: background 0.4s ease, color 0.4s ease;
     }
 
-    /* Hiệu ứng Background Tối Ưu */
     .boba-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
     .boba-icon-blur {
       position: absolute; opacity: 0.25; filter: blur(2px);
@@ -67,7 +64,6 @@
       to { transform: translateY(-30px) rotate(15deg); }
     }
 
-    /* In-app Toast Notifications */
     #notification-container {
       position: fixed; top: max(20px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
       z-index: 99999; width: 90%; max-width: 400px; pointer-events: none;
@@ -86,7 +82,6 @@
     .toast-msg { color: var(--text-main); font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
     @keyframes slideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Modal Overlay */
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
       z-index: 100000; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
@@ -111,7 +106,6 @@
     .btn-ok { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
     .btn-cancel { background: var(--white); color: var(--text-light); border: 1px solid var(--glass-border); }
 
-    /* Reactions & Actions overlay */
     #reaction-overlay { z-index: 100001; }
     .reaction-box {
       background: var(--bg-glass-heavy);
@@ -149,7 +143,6 @@
     body.dark-mode .action-btn:hover, body.dark-mode .action-btn:active { background: rgba(255,255,255,0.05); }
     .action-btn.danger { color: #e57373; }
 
-    /* CSS cho Game Caro */
     .tictactoe-cell {
       background: var(--bg-glass-heavy);
       border: 2px solid var(--glass-border);
@@ -172,7 +165,6 @@
     .tictactoe-cell.x-mark { color: #E57373; } 
     .tictactoe-cell.o-mark { color: #4FC3F7; } 
 
-    /* App Container */
     .app-container { 
       width: 96%; max-width: 480px; background: var(--bg-glass); 
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); 
@@ -183,7 +175,6 @@
     }
     @media (min-width: 481px) { .app-container { height: 92vh; width: 100%; } }
 
-    /* Auth & Inputs */
     .auth-panel { padding: 40px 30px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
     .auth-title { text-align: center; font-size: 2.2rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .auth-subtitle { text-align: center; font-size: 1rem; color: var(--text-light); margin-top: -15px; margin-bottom: 20px; font-weight: 700;}
@@ -196,7 +187,6 @@
     .id-box { width: 100%; height: 55px; font-size: 1.5rem; text-align: center; border: 1px solid var(--glass-border); background: var(--bg-glass-heavy); border-radius: 16px; outline: none; font-weight: 800; color: var(--text-main); transition: all 0.3s; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); }
     .id-box:focus { background: var(--white); border-color: var(--primary); box-shadow: 0 4px 15px rgba(212, 163, 115, 0.2); }
     
-    /* App Layout */
     .screen { display: none; flex-direction: column; height: 100%; width: 100%; }
     .screen.active { display: flex; animation: fadeIn 0.4s ease; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -206,7 +196,6 @@
     
     .rank-badge { font-size: 0.75rem; color: white; padding: 3px 8px; border-radius: 12px; font-weight: 800; margin-left: 8px; vertical-align: middle; display: inline-block; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
-    /* Tabs & Nav */
     .tab-pane { display: none; flex-direction: column; height: 100%; overflow: hidden; }
     .tab-pane.active { display: flex; }
     .tab-content { flex: 1; overflow-y: auto; padding-bottom: 100px; -webkit-overflow-scrolling: touch; }
@@ -217,7 +206,6 @@
     .nav-icon { font-size: 1.5rem; transition: transform 0.3s; }
     .nav-item.active .nav-icon { filter: drop-shadow(0 4px 10px rgba(212, 163, 115, 0.4)); }
 
-    /* Lists */
     .friend-item { display: flex; align-items: center; padding: 15px 20px; border: 1px solid var(--glass-border); cursor: pointer; background: var(--bg-glass-heavy); margin: 10px 15px; border-radius: 20px; box-shadow: 0 6px 15px rgba(0, 0, 0, 0.05); transition: all 0.2s; backdrop-filter: blur(5px);}
     .friend-item:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
     .avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--white); background: var(--secondary); box-shadow: 0 4px 10px rgba(0,0,0,0.12);}
@@ -232,7 +220,6 @@
 
     .empty-state { text-align: center; padding: 50px 20px; color: var(--text-light); font-weight: 700; font-size: 1.1rem; }
 
-    /* Profile Tab */
     .profile-header { display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background: var(--bg-glass-heavy); backdrop-filter: blur(10px); border-bottom: 1px solid var(--glass-border); margin-bottom: 15px; border-radius: 0 0 30px 30px; box-shadow: 0 6px 25px rgba(0,0,0,0.05);}
     .profile-avatar { width: 95px; height: 95px; border-radius: 50%; border: 4px solid var(--white); margin-bottom: 12px; box-shadow: 0 6px 20px rgba(212, 163, 115, 0.3); object-fit: cover;}
     .profile-name { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; justify-content: center; text-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -241,11 +228,9 @@
     .add-friend-box input { flex: 1; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--white); padding: 12px 15px; outline: none; font-weight: 600; color: var(--text-main); box-shadow: inset 0 2px 5px rgba(0,0,0,0.03);}
     .add-friend-box button { background: var(--primary); color: white; border: none; padding: 0 22px; border-radius: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(212, 163, 115, 0.4);}
 
-    /* Settings Tab */
     .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-glass-heavy); border: 1px solid var(--glass-border); margin: 10px 20px; border-radius: 20px; box-shadow: 0 6px 15px rgba(0,0,0,0.04); font-weight: 700;}
     .setting-item select { padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(212, 163, 115, 0.5); background: var(--white); color: var(--text-main); font-family: 'Nunito'; font-weight: 800; outline: none; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.05);}
 
-    /* Chat Room */
     .chat-room { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-glass); backdrop-filter: blur(14px); z-index: 50; display: none; flex-direction: column; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .chat-room.active { display: flex; transform: translateX(0); }
     .chat-room-header { background: var(--bg-glass-heavy); backdrop-filter: blur(10px); padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid var(--glass-border); gap: 15px; padding-top: max(15px, env(safe-area-inset-top)); box-shadow: 0 4px 15px rgba(0,0,0,0.04);}
@@ -299,13 +284,11 @@
     .msg-status { font-weight: 800; color: var(--primary); }
     .msg-countdown { font-style: italic; display: flex; align-items: center; gap: 3px; }
 
-    /* Tính năng đang gõ... */
     .typing-indicator {
       font-size: 0.85rem; color: var(--text-light); font-style: italic;
       padding: 5px 20px; display: none; animation: fadeIn 0.3s;
     }
 
-    /* Input Area */
     .chat-input-area { padding: 10px 12px; background: var(--bg-glass-heavy); backdrop-filter: blur(12px); border-top: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; padding-bottom: max(10px, env(safe-area-inset-bottom)); position: relative; box-shadow: 0 -6px 25px rgba(0,0,0,0.06);}
     .icon-btn { background: var(--white); color: var(--primary); border: 1px solid rgba(255,255,255,0.7); width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.08); transition: transform 0.2s;}
     .icon-btn:active { transform: scale(0.9); }
@@ -314,7 +297,6 @@
     .chat-input-area button[type="submit"] { background: var(--primary); color: white; border: 1px solid rgba(255,255,255,0.4); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; flex-shrink: 0; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.6); transition: transform 0.2s;}
     .chat-input-area button[type="submit"]:active { transform: scale(0.9); }
     
-    /* Custom Voice Recording Bar CSS */
     .voice-bar {
       display: none; flex: 1; align-items: center; justify-content: space-between;
       background: var(--bg-glass-heavy); border-radius: 20px; padding: 0 15px; height: 42px;
@@ -350,7 +332,6 @@
       background: var(--bubble-sent);
     }
     
-    /* Sticker Panel */
     .sticker-panel { display: none; position: absolute; bottom: 85px; left: 15px; right: 15px; background: var(--bg-glass-heavy); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 -10px 30px rgba(0,0,0,0.15); flex-direction: column; height: 280px; z-index: 60; overflow: hidden; }
     .sticker-panel.active { display: flex; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
     .sticker-tabs { display: flex; background: rgba(0,0,0,0.03); border-bottom: 1px solid var(--glass-border); overflow-x: auto; padding: 5px 10px; gap: 8px; }
@@ -362,14 +343,12 @@
     .sticker-item-img:hover, .sticker-item-img:active { transform: scale(1.18); filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));}
     @keyframes slideUp { from { opacity: 0; transform: translateY(15px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-    /* Avatar Upload */
     .avatar-wrapper { position: relative; display: inline-block; cursor: pointer; margin-bottom: 12px; }
     .avatar-edit-icon { position: absolute; bottom: 5px; right: 0; background: var(--primary); color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 1rem; border: 3px solid var(--bg-glass-heavy); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.2s; }
     .avatar-wrapper:active .avatar-edit-icon { transform: scale(0.9); }
 
     .register-avatar-preview { width: 85px; height: 85px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin: 0 auto; display: block; cursor: pointer; background: var(--white); box-shadow: 0 6px 20px rgba(212, 163, 115, 0.35); }
 
-    /* SYSTEM LOG FOR FOUNDER */
     #sys-log-modal .modal-box { 
       width: 95%; max-width: 650px; height: 85vh; display: flex; flex-direction: column; text-align: left; 
       background: rgba(15, 15, 15, 0.95); border: 1px solid #333; 
@@ -406,11 +385,34 @@
     .msg-bubble, .msg-img, .msg-video, .msg-audio { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .msg-bubble:hover, .msg-img:hover, .msg-video:hover, .msg-audio:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important; }
 
-    /* ==========================================
-       TỐI ƯU HÓA HIỆU NĂNG CHO ĐIỆN THOẠI (CHỐNG LAG)
-       ========================================== */
+    #call-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--bg-body-1); z-index: 100005;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    #call-overlay.active { transform: translateY(0); }
+    .video-container { position: relative; width: 100%; height: 100%; background: #000; }
+    #remote-video { width: 100%; height: 100%; object-fit: cover; }
+    #local-video {
+      position: absolute; bottom: 100px; right: 20px; width: 100px; height: 150px;
+      object-fit: cover; border-radius: 12px; border: 2px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      background: #333; transform: scaleX(-1); 
+    }
+    .call-controls {
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 20px; z-index: 10;
+    }
+    .call-btn {
+      width: 60px; height: 60px; border-radius: 50%; border: none; font-size: 1.5rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.2s;
+    }
+    .call-btn:active { transform: scale(0.9); }
+    .btn-end-call { background: #e57373; color: white; }
+    .btn-toggle { background: rgba(255,255,255,0.2); color: white; backdrop-filter: blur(5px); }
+
     @media (max-width: 768px) {
-      /* Tắt toàn bộ hiệu ứng mờ và bóng đổ trên thiết bị di động */
       * {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
@@ -418,7 +420,6 @@
         text-shadow: none !important;
       }
       
-      /* Giảm thiểu độ phức tạp của background */
       body, .app-container, .chat-room { 
         background: var(--bg-body-1) !important; 
       }
@@ -428,7 +429,6 @@
         border: 1px solid var(--glass-border) !important;
       }
 
-      /* Đơn giản hóa animation nền */
       .boba-icon-blur {
         filter: none !important;
         opacity: 0.1 !important;
@@ -450,11 +450,23 @@
   <div class="boba-bg" id="boba-bg"></div> 
   <div id="notification-container"></div>
 
+  <div id="call-overlay">
+    <div class="video-container">
+      <video id="remote-video" autoplay playsinline></video>
+      <video id="local-video" autoplay playsinline muted></video>
+    </div>
+    <h2 id="call-status" style="position:absolute; top: 50px; color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.5);">Đang gọi...</h2>
+    <div class="call-controls">
+      <button class="call-btn btn-toggle" id="btn-toggle-mic" onclick="toggleMic()">🎤</button>
+      <button class="call-btn btn-end-call" onclick="endCall()">📞</button>
+      <button class="call-btn btn-toggle" id="btn-toggle-cam" onclick="toggleCam()">📹</button>
+    </div>
+  </div>
+
   <div id="image-viewer-modal" class="modal-overlay" style="z-index: 100002; background: rgba(0,0,0,0.85);" onclick="closeImageViewer(event)">
     <div style="position: relative; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; align-items: center;">
       <button onclick="closeImageViewerDirect()" style="position: absolute; top: -45px; right: 0; background: rgba(255,255,255,0.25); color: white; border: 1px solid rgba(255,255,255,0.4); font-size: 1.6rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: transform 0.2s;">✕</button>
       <img id="image-viewer-img" src="" style="max-width: 100%; max-height: 82vh; border-radius: 18px; object-fit: contain; box-shadow: 0 10px 40px rgba(0,0,0,0.6);">
-      <!-- THÊM NÚT TẢI XUỐNG -->
       <a id="download-img-btn" href="" download="Boba_Image.jpg" style="position: absolute; bottom: -50px; background: var(--primary); color: white; padding: 10px 20px; border-radius: 20px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 10;">📥 Tải xuống</a>
     </div>
   </div>
@@ -463,7 +475,6 @@
     <div style="position: relative; width: 95%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; align-items: center;">
       <button onclick="closeVideoViewerDirect()" style="position: absolute; top: -45px; right: 0; background: rgba(255,255,255,0.25); color: white; border: 1px solid rgba(255,255,255,0.4); font-size: 1.6rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: transform 0.2s; z-index: 10;">✕</button>
       <video id="video-viewer-vid" controls playsinline style="max-width: 100%; max-height: 82vh; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #000; outline: none;"></video>
-      <!-- THÊM NÚT TẢI XUỐNG -->
       <a id="download-vid-btn" href="" download="Boba_Video.mp4" style="position: absolute; bottom: -50px; background: var(--primary); color: white; padding: 10px 20px; border-radius: 20px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 10;">📥 Tải xuống</a>
     </div>
   </div>
@@ -526,15 +537,12 @@
     </div>
   </div>
 
-  <!-- GAME OVERLAY -->
   <div id="game-overlay" class="modal-overlay" style="z-index: 100004;" onclick="closeGame(event)">
     <div class="modal-box" style="width: 95%; max-width: 380px; padding: 20px;">
       <h3 class="modal-title" style="margin-bottom: 10px;">Boba Games 🎮</h3>
       <div id="game-status" style="font-size: 1rem; font-weight: 800; color: var(--primary); margin-bottom: 15px;">Đang chờ người chơi...</div>
       
-      <!-- Bàn cờ Caro 3x3 -->
       <div id="tictactoe-board" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px;">
-        <!-- JavaScript sẽ tự động tạo các ô cờ ở đây -->
       </div>
       
       <div style="display: flex; gap: 10px; justify-content: center;">
@@ -583,29 +591,24 @@
         <div class="tab-content" id="chat-list-container"></div>
       </div>
 
-      <!-- TAB NHẠC -->
       <div id="tab-music" class="tab-pane">
         <div class="header-bar"><span class="header-title">Boba Music 🎵</span></div>
         <div class="tab-content" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
           
-          <!-- Thanh tìm kiếm -->
           <div style="display: flex; gap: 10px;">
             <input type="text" id="music-search-input" class="input-cute" style="flex: 1; padding: 12px; font-size: 0.95rem;" placeholder="Tìm tên bài hát, ca sĩ...">
             <button class="btn-cute" style="padding: 0 15px;" onclick="performMusicSearch()">🔍</button>
           </div>
           
-          <!-- Trình phát video (Ẩn/Hiện tự động) -->
           <div id="yt-player-container" style="border-radius: 15px; overflow: hidden; height: 200px; background: rgba(0,0,0,0.1); flex-shrink: 0; display: none;">
             <div id="yt-player"></div>
           </div>
 
-          <!-- Cụm nút điều khiển -->
           <div class="music-controls" style="display: flex; gap: 10px; justify-content: center;">
             <button id="btn-yt-pause" class="btn-cute" style="flex: 1; background: var(--bg-glass-heavy); color: var(--text-main); border: 1px solid var(--glass-border);">⏸ Dừng</button>
             <button id="btn-yt-play" class="btn-cute" style="flex: 1; background: var(--bg-glass-heavy); color: var(--text-main); border: 1px solid var(--glass-border);">▶ Tiếp tục</button>
           </div>
 
-          <!-- Danh sách kết quả tìm kiếm -->
           <h3 style="margin-top: 10px; font-size: 1.1rem; color: var(--text-main);">Kết quả tìm kiếm</h3>
           <div id="music-search-results" style="display: flex; flex-direction: column; gap: 10px;">
             <div class="empty-state">Nhập tên bài hát để tìm kiếm nhé 🎧</div>
@@ -711,13 +714,14 @@
           <span id="chat-room-name"></span>
           <span id="chat-room-rank" class="rank-badge" style="display:none; font-size:0.65rem;"></span>
         </div>
+        <button class="nickname-btn" onclick="initCall(false)" title="Gọi thoại">📞</button>
+        <button class="nickname-btn" onclick="initCall(true)" title="Gọi Video">🎥</button>
         <button class="nickname-btn" onclick="sendGameInvite('tictactoe')" title="Mời chơi Game">🎮</button>
         <button class="nickname-btn" onclick="setFriendNickname()" title="Đặt biệt danh">✏️</button>
       </div>
       
       <div class="messages-area" id="messages-area"></div>
-      
-      <!-- INDICATOR ĐANG GÕ -->
+
       <div id="typing-indicator" class="typing-indicator">Người ấy đang gõ...</div>
       
       <div class="reply-preview-container" id="reply-preview-container">
@@ -763,6 +767,12 @@
   </div>
 
   <script>
+
+    const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    let peerConnection;
+    let localStream;
+    let callActive = false;
+    let isVideoCall = false;
 
     const bobaLogs = [];
     const MAX_LOGS = 500;
@@ -899,7 +909,6 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       el.classList.add('active');
 
-      // Tải Lazy API Youtube chỉ khi vào tab Music
       if (tabId === 'music' && !ytApiLoaded) {
         const ytScriptTag = document.createElement('script');
         ytScriptTag.src = "https://www.youtube.com/iframe_api";
@@ -1039,7 +1048,6 @@
       });
     }
 
-    // --- CẤU HÌNH SUPABASE ---
     const supabaseUrl = 'https://amccmhqxmnfxhsjmxhbh.supabase.co';
     const supabaseSecretKey = 'sb_publishable_rAPznr0wt-4tt6JAHm30Bw_kH6BIA0H'; 
     const mySupabaseClient = window.supabase.createClient(supabaseUrl, supabaseSecretKey);
@@ -1072,7 +1080,6 @@
     let replyingMessageId = null;
     let registerAvatarFile = null;
 
-    // --- TÍNH NĂNG GHI ÂM ---
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
@@ -1169,7 +1176,6 @@
     async function uploadVoice(blob) {
       if (!activeFriendId) return;
 
-      // Chụp lại state giống uploadMedia
       const targetFriendId = activeFriendId;
       const targetReplyId = replyingMessageId;
       
@@ -1191,7 +1197,6 @@
       
       const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
       if (data) { 
-        // Chỉ render nếu chưa chuyển sang chat với người khác
         if (activeFriendId === targetFriendId) {
           renderMessage(data); 
           scrollToBottom(); 
@@ -1199,7 +1204,6 @@
       }
     }
 
-    /* --- HÀM NÉN ẢNH --- */
     async function compressImage(file, maxWidth = 1280, quality = 0.75) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('image/')) return resolve(file);
@@ -1240,7 +1244,6 @@
       });
     }
 
-    /* --- HÀM NÉN VIDEO --- ĐÃ CẬP NHẬT GIẢM NÉN (CHẤT LƯỢNG CAO) */
     async function compressVideo(file, targetWidth = 1280, bitrate = 2500000) {
       return new Promise((resolve) => {
         if (!file.type.startsWith('video/')) return resolve(file);
@@ -1475,7 +1478,6 @@
       bg.innerHTML = ''; 
       const icons = ['🧋', '🌸', '✨', '🤍', '🍡'];
       
-      // Tối ưu: Nếu là điện thoại, chỉ hiển thị 6 icon, nếu là máy tính thì 15 icon
       const isMobile = window.innerWidth <= 768;
       const numIcons = isMobile ? 6 : 15; 
       
@@ -1592,8 +1594,7 @@
       applySettings();
 
       document.getElementById('my-name').textContent = currentProfile.username;
-      
-      // -- THÊM TÍNH NĂNG RANK VÀO PROFILE --
+    
       const myRankBadge = document.getElementById('my-rank');
       if (currentRank) {
         myRankBadge.style.display = 'inline-block';
@@ -1625,12 +1626,8 @@
       await loadFriendsData();
       subscribeToChanges();
       
-      // =====================================
-      // KHỞI TẠO KÊNH CHAT ROOM (TYPING & GAME)
-      // =====================================
       const chatRoomChannel = mySupabaseClient.channel('chat-room-events');
-      
-      // 1. Sự kiện gõ phím
+
       chatRoomChannel.on('broadcast', { event: 'typing' }, payload => {
         if (activeFriendId && payload.payload.sender_id === activeFriendId && payload.payload.receiver_id === currentProfile.id) {
           const indicator = document.getElementById('typing-indicator');
@@ -1641,7 +1638,6 @@
         }
       });
 
-      // 2. Sự kiện Game - Nhận lời mời
       chatRoomChannel.on('broadcast', { event: 'game_invite' }, async payload => {
         if (payload.payload.receiver_id === currentProfile.id) {
            const senderName = getFriendDisplayName(payload.payload.sender_id, "Bạn bè");
@@ -1657,7 +1653,6 @@
         }
       });
 
-      // 3. Sự kiện Game - Chấp nhận lời mời
       chatRoomChannel.on('broadcast', { event: 'game_accept' }, payload => {
         if (payload.payload.receiver_id === currentProfile.id) {
           showAppNotification("Đối thủ đã sẵn sàng!", "Ván đấu bắt đầu.");
@@ -1665,7 +1660,6 @@
         }
       });
 
-      // 4. Sự kiện Game - Cập nhật nước đi
       chatRoomChannel.on('broadcast', { event: 'game_move' }, payload => {
         if (payload.payload.receiver_id === currentProfile.id && isGameActive) {
           gameState = payload.payload.board;
@@ -1676,11 +1670,81 @@
         }
       });
 
-      // 5. Sự kiện Game - Yêu cầu tái đấu
       chatRoomChannel.on('broadcast', { event: 'game_rematch' }, payload => {
         if (payload.payload.receiver_id === currentProfile.id) {
            showAppNotification("Tái đấu", "Đối thủ muốn chơi lại. Lần này bạn sẽ đổi quân cờ!");
            initTicTacToe(myGameSymbol === 'X' ? 'O' : 'X');
+        }
+      });
+
+
+      chatRoomChannel.on('broadcast', { event: 'call_invite' }, async payload => {
+        if (payload.payload.receiver_id === currentProfile.id) {
+          const isVid = payload.payload.video;
+          const senderName = getFriendDisplayName(payload.payload.sender_id, "Ai đó");
+          const accept = await showAppModal("Cuộc gọi đến 📞", `${senderName} đang gọi ${isVid ? 'Video' : 'Thoại'} cho bạn. Nghe máy?`, true);
+          
+          if (accept) {
+            isVideoCall = isVid;
+            document.getElementById('call-overlay').classList.add('active');
+            await getMedia(isVid);
+            createPeerConnection();
+            
+            mySupabaseClient.channel('chat-room-events').send({
+              type: 'broadcast', event: 'call_accept',
+              payload: { sender_id: currentProfile.id, receiver_id: payload.payload.sender_id }
+            });
+          } else {
+            mySupabaseClient.channel('chat-room-events').send({
+              type: 'broadcast', event: 'call_end',
+              payload: { sender_id: currentProfile.id, receiver_id: payload.payload.sender_id }
+            });
+          }
+        }
+      });
+
+      chatRoomChannel.on('broadcast', { event: 'call_accept' }, async payload => {
+        if (payload.payload.receiver_id === currentProfile.id) {
+          createPeerConnection();
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+          
+          mySupabaseClient.channel('chat-room-events').send({
+            type: 'broadcast', event: 'webrtc_offer',
+            payload: { sender_id: currentProfile.id, receiver_id: payload.payload.sender_id, sdp: offer }
+          });
+        }
+      });
+
+      chatRoomChannel.on('broadcast', { event: 'webrtc_offer' }, async payload => {
+        if (payload.payload.receiver_id === currentProfile.id && peerConnection) {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          
+          mySupabaseClient.channel('chat-room-events').send({
+            type: 'broadcast', event: 'webrtc_answer',
+            payload: { sender_id: currentProfile.id, receiver_id: payload.payload.sender_id, sdp: answer }
+          });
+        }
+      });
+
+      chatRoomChannel.on('broadcast', { event: 'webrtc_answer' }, async payload => {
+        if (payload.payload.receiver_id === currentProfile.id && peerConnection) {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.payload.sdp));
+        }
+      });
+
+      chatRoomChannel.on('broadcast', { event: 'webrtc_ice' }, async payload => {
+        if (payload.payload.receiver_id === currentProfile.id && peerConnection) {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(payload.payload.candidate));
+        }
+      });
+
+      chatRoomChannel.on('broadcast', { event: 'call_end' }, payload => {
+        if (payload.payload.receiver_id === currentProfile.id) {
+          showAppNotification("Kết thúc", "Cuộc gọi đã kết thúc.");
+          endCall();
         }
       });
 
@@ -1696,7 +1760,6 @@
         }
     };
 
-    // --- TỐI ƯU HÓA: GOM NHÓM DOM CẬP NHẬT TRONG JS (BATCHING) ---
     async function loadFriendsData() {
       const { data: relations } = await mySupabaseClient.from('friends')
         .select('id, sender_id, receiver_id, status')
@@ -2020,8 +2083,7 @@
       const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
       if (data) { renderMessage(data); scrollToBottom(); }
     };
-    
-    // --- TỐI ƯU HÓA: DEBOUNCE SỰ KIỆN GÕ PHÍM ---
+
     function debounce(func, timeout = 500){
       let timer;
       return (...args) => {
@@ -2051,14 +2113,11 @@
       let file = e.target.files[0]; 
       if (!file || !activeFriendId) return;
 
-      // 1. "CHỤP LẠI" ID NGƯỜI NHẬN & ID TIN NHẮN PHẢN HỒI (Tránh lỗi chuyển chat)
       const targetFriendId = activeFriendId;
       const targetReplyId = replyingMessageId;
       
-      // Xóa UI trả lời ngay lập tức để người dùng không bị kẹt
       if (replyingMessageId) cancelReplyMode();
 
-      // 2. HIỆN THÔNG BÁO NGAY LẬP TỨC TRƯỚC KHI NẾN
       const isImage = file.type.startsWith('image/');
       showAppNotification('Đang xử lý...', `Đang nén ${isImage ? 'ảnh' : 'video'} (tránh lag máy)... ⏳`);
 
@@ -2075,7 +2134,6 @@
       const fileExt = file.name.split('.').pop(); 
       const fileName = `chat_${Date.now()}.${fileExt}`;
       
-      // Cập nhật thông báo sang trạng thái upload
       showAppNotification('Đang gửi...', `Đang tải ${isImage ? 'ảnh' : 'video'} lên máy chủ 🚀`);
 
       const { error: upErr } = await mySupabaseClient.storage.from(targetBucket).upload(fileName, file);
@@ -2083,13 +2141,11 @@
       
       const url = mySupabaseClient.storage.from(targetBucket).getPublicUrl(fileName).data.publicUrl;
 
-      // 3. SỬ DỤNG targetFriendId ĐÃ LƯU TỪ TRƯỚC
       const msgObj = { sender_id: currentProfile.id, receiver_id: targetFriendId, image_url: url };
       if (targetReplyId) { msgObj.reply_to_id = targetReplyId; }
       
       const { data } = await mySupabaseClient.from('messages').insert([msgObj]).select('*').single();
       if (data) { 
-        // 4. KIỂM TRA: Chỉ render tin nhắn ra màn hình nếu đang mở ĐÚNG khung chat đó
         if (activeFriendId === targetFriendId) {
           renderMessage(data); 
           scrollToBottom(); 
@@ -2175,10 +2231,6 @@
       else { document.getElementById('auth-screen').classList.add('active'); applySettings(); }
     });
 
-    // ==========================================
-    // TÍNH NĂNG BOBA MUSIC (NẰM TRONG TAB)
-    // ==========================================
-
     let ytPlayer;
 
     window.onYouTubeIframeAPIReady = function() {
@@ -2202,7 +2254,6 @@
       if (e.key === 'Enter') performMusicSearch();
     });
 
-    // Hàm Tìm Kiếm - HÃY ĐIỀN YOUTUBE DATA API KEY VÀO ĐÂY
     const YOUTUBE_API_KEY = 'AIzaSyAiiUvM07eyeJeXbFq2eHG4sM04kaIt2dw';
 
     async function performMusicSearch() {
@@ -2253,11 +2304,8 @@
       }
     }
 
-    // ==========================================
-    // HỆ THỐNG BOBA GAMES (MULTIPLAYER)
-    // ==========================================
     let gameState = ['', '', '', '', '', '', '', '', ''];
-    let myGameSymbol = ''; // 'X' hoặc 'O'
+    let myGameSymbol = '';
     let currentTurn = 'X';
     let isGameActive = false;
 
@@ -2377,6 +2425,83 @@
         event: 'game_rematch',
         payload: { sender_id: currentProfile.id, receiver_id: activeFriendId }
       });
+    }
+
+    async function initCall(video) {
+      if (!activeFriendId) return;
+      isVideoCall = video;
+      document.getElementById('call-overlay').classList.add('active');
+      document.getElementById('call-status').innerText = "Đang kết nối...";
+      
+      await getMedia(video);
+      
+      mySupabaseClient.channel('chat-room-events').send({
+        type: 'broadcast', event: 'call_invite',
+        payload: { sender_id: currentProfile.id, receiver_id: activeFriendId, video: video }
+      });
+    }
+
+    async function getMedia(video) {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: video, audio: true });
+        document.getElementById('local-video').srcObject = localStream;
+      } catch (err) {
+        showAppNotification("Lỗi thiết bị", "Không thể truy cập Camera/Mic.");
+        endCall();
+      }
+    }
+
+    function createPeerConnection() {
+      peerConnection = new RTCPeerConnection(rtcConfig);
+      
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          mySupabaseClient.channel('chat-room-events').send({
+            type: 'broadcast', event: 'webrtc_ice',
+            payload: { sender_id: currentProfile.id, receiver_id: activeFriendId, candidate: event.candidate }
+          });
+        }
+      };
+
+      peerConnection.ontrack = event => {
+        document.getElementById('remote-video').srcObject = event.streams[0];
+        document.getElementById('call-status').innerText = ""; 
+      };
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+      }
+    }
+
+    function toggleMic() {
+      if(!localStream) return;
+      const audioTrack = localStream.getAudioTracks()[0];
+      audioTrack.enabled = !audioTrack.enabled;
+      document.getElementById('btn-toggle-mic').style.opacity = audioTrack.enabled ? '1' : '0.5';
+    }
+
+    function toggleCam() {
+      if(!localStream) return;
+      const videoTrack = localStream.getVideoTracks()[0];
+      if(videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        document.getElementById('btn-toggle-cam').style.opacity = videoTrack.enabled ? '1' : '0.5';
+      }
+    }
+
+    function endCall() {
+      document.getElementById('call-overlay').classList.remove('active');
+      if (peerConnection) { peerConnection.close(); peerConnection = null; }
+      if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+      document.getElementById('remote-video').srcObject = null;
+      callActive = false;
+
+      if (activeFriendId) {
+        mySupabaseClient.channel('chat-room-events').send({
+          type: 'broadcast', event: 'call_end',
+          payload: { sender_id: currentProfile.id, receiver_id: activeFriendId }
+        });
+      }
     }
   </script>
 </body>
