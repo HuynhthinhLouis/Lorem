@@ -1744,7 +1744,7 @@
       chatRoomChannel.on('broadcast', { event: 'call_end' }, payload => {
         if (payload.payload.receiver_id === currentProfile.id) {
           showAppNotification("Kết thúc", "Cuộc gọi đã kết thúc.");
-          endCall();
+          endCall(false); // Đã fix tại đây
         }
       });
 
@@ -2447,7 +2447,7 @@
         document.getElementById('local-video').srcObject = localStream;
       } catch (err) {
         showAppNotification("Lỗi thiết bị", "Không thể truy cập Camera/Mic.");
-        endCall();
+        endCall(false); // Đã fix tại đây
       }
     }
 
@@ -2489,14 +2489,14 @@
       }
     }
 
-    function endCall() {
+    function endCall(isBroadcast = true) {
       document.getElementById('call-overlay').classList.remove('active');
       if (peerConnection) { peerConnection.close(); peerConnection = null; }
       if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
       document.getElementById('remote-video').srcObject = null;
       callActive = false;
 
-      if (activeFriendId) {
+      if (isBroadcast && activeFriendId) {
         mySupabaseClient.channel('chat-room-events').send({
           type: 'broadcast', event: 'call_end',
           payload: { sender_id: currentProfile.id, receiver_id: activeFriendId }
